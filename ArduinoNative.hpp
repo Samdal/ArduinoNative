@@ -79,8 +79,6 @@ uint16_t analogRead(uint8_t pin);
 void analogWrite(uint8_t pin, uint8_t value);
 void an_set_voltage(uint8_t pin, float voltage);
 
-// Zero, Due & MKR Family
-
 // Advanced I/O
 // void noTone(uint8_t pin);
 // unsigned long pulseIn(uint8_t pin, bool value);
@@ -88,8 +86,8 @@ void an_set_voltage(uint8_t pin, float voltage);
 // unsigned long tone(uint8_t pin, unsigned frequenzy);
 
 //Time
-void delay(unsigned long milliseconds);
-void delayMicroseconds(unsigned long microseconds);
+inline void delay(unsigned long milliseconds);
+inline void delayMicroseconds(unsigned long microseconds);
 unsigned long micros(void);
 unsigned long millis(void);
 
@@ -230,9 +228,7 @@ int main()
 
         // run setup() and loop()
         setup();
-        for (;;) {
-                loop();
-        }
+        for (;;) loop();
 }
 
 // Digital I/O
