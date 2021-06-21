@@ -12,7 +12,7 @@ Not only do you have the ability to use your favorite IDE with fancy code sugges
 4. Include ArduinoNative.hpp
 ** A basic blink example
 #+BEGIN_SRC C++
-#define AN_DEBUG_AL
+#define AN_DEBUG_ALL
 #define AN_IMPL
 #include "ArduinoNative.hpp"
 
