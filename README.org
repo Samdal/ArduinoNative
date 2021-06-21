@@ -31,7 +31,7 @@ void loop()
 #+END_SRC
 * Available functions
 Note that some functions are not implemented exactly like Arduino has them.
-For example Serial.print and prinln don't have can't print in byte representation yet.
+For example Serial.print and prinln can't print in byte representation yet.
 ** Implimented from Arduino Library:
 Note that less important functions haven't been tested that much
 - [X] Digital I/O()
@@ -122,7 +122,7 @@ Note that less important functions haven't been tested that much
 - [ ] String Object
 PROGMEM, USB and Stream aren't implemented and likely never will be
 ** Other functions
-change voltage of pin
+Change voltage of pin
 #+BEGIN_SRC C++
 an_set_voltage(pin, voltage)
 #+END_SRC
@@ -132,12 +132,12 @@ Change voltage of pin from console imput
 an_request_voltage(pin)
 #+END_SRC
 
-take input from console and put it in Serial buffer
+Take input from console and put it in Serial buffer
 #+BEGIN_SRC C++
 Serial.an_take_input()
 #+END_SRC
 * More Examples
-** Serial and AnalogRead:
+** Serial and AnalogRead
 #+BEGIN_SRC C++
 #define AN_BOARD_NANO
 #define AN_IMPL
