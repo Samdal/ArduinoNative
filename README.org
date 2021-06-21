@@ -3,7 +3,7 @@
 
 * What is ArduinoNative?
 Arduino native allows you to run arduino code without arduino.
-ArduinoNative does not attempt to emulate or simulate arduino, it is a simple header only implementation of the Arduino library in order to test and debug arduino code.
+ArduinoNative does not attempt to emulate or simulate an arduino, it is a simple header only implementation of the Arduino library in order to test and debug arduino code.
 Not only do you have the ability to use your favorite IDE with fancy code suggestions, you can even use a debugger to step through your code.
 * Getting started
 1. Download and install requiered tools to build C++ on your machine
@@ -29,6 +29,7 @@ void loop()
         delay(1000);
 }
 #+END_SRC
+[[More Examples]]
 * Available functions
 Note that some functions are not implemented exactly like Arduino has them.
 For example Serial.print and prinln can't print in byte representation yet.
