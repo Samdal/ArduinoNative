@@ -3,3 +3,4 @@ tmp/
 bin/
 *.out
 *.o
+*.cpp
