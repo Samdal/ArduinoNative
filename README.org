@@ -1,0 +1,196 @@
+#+TITLE: ArduinoNative
+#+AUTHOR: Halvard Samdal
+
+* What is ArduinoNative?
+Arduino native allows you to run arduino code without arduino.
+ArduinoNative does not attempt to emulate or simulate arduino, it is a simple header only implementation of the Arduino library in order to test and debug arduino code.
+Not only do you have the ability to use your favorite IDE with fancy code suggestions, you can even use a debugger to step through your code.
+* Getting started
+1. Download and install requiered tools to build C++ on your machine
+2. Create a new C++ project and place ArduinoNative.hpp in that directory
+3. Define AN_IMPL in one and only one of your source files
+4. Include ArduinoNative.hpp
+** A basic blink example
+#+BEGIN_SRC C++
+#define AN_DEBUG_AL
+#define AN_IMPL
+#include "ArduinoNative.hpp"
+
+void setup()
+{
+        pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop()
+{
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(1000);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(1000);
+}
+#+END_SRC
+* Available functions
+Note that some functions are not implemented exactly like Arduino has them.
+For example Serial.print and prinln don't have can't print in byte representation yet.
+** Implimented from Arduino Library:
+Note that less important functions haven't been tested that much
+- [X] Digital I/O()
+  + [X] digitalRead()
+  + [X] digitalWrite()
+  + [X] pinMode()
+- [-] Analog I/O
+  + [X] analogRead()
+  + [X] analogWrite()
+  + [ ] analogReference()
+- [ ] Advanced I/O
+  + [ ] noTone()
+  + [ ] pulseIn()
+  + [ ] pulseInLong()
+  + [ ] shiftIn()
+  + [ ] shiftOut()
+  + [ ] tone()
+- [X] Time
+  + [X] delay()
+  + [X] delayMicroseconds()
+  + [X] micros()
+  + [X] millis()
+- [X] Math
+  + [X] abs()
+  + [X] constrain()
+  + [X] map()
+  + [X] max()
+  + [X] min()
+  + [X] pow()
+  + [X] sq()
+  + [X] sqrt()
+- [X] Trigonometry
+  + [X] cos()
+  + [X] sin()
+  + [X] tan()
+- [X] Characters
+  + [X] isAlpha()
+  + [X] isAlphaNumeric()
+  + [X] isAscii()
+  + [X] isControl()
+  + [X] isDigit()
+  + [X] isGraph()
+  + [X] isHexadecimalDigit()
+  + [X] isLowerCase()
+  + [X] isPrintable()
+  + [X] isPunct()
+  + [X] isSpace()
+  + [X] isUpperCase()
+  + [X] isWhitespace()
+- [X] Random Numbers
+  + [X] random()
+  + [X] randomSeed()
+- [X] Bits and Bytes
+  + [X] bit()
+  + [X] bitClear()
+  + [X] bitRead()
+  + [X] bitSet()
+  + [X] bitWrite()
+  + [X] highByte()
+  + [X] lowByte()
+- [X] External Interrupts
+  + [X] attachInterrupt()
+  + [X] detachInterrupt()
+- [ ] Interrupts
+  + [ ] interrupts()
+  + [ ] noInterrupts()
+- [-] Serial
+  + [X] available()
+  + [X] availableForWrite()
+  + [X] begin()
+  + [X] end()
+  + [ ] find()
+  + [ ] findUntil()
+  + [X] flush()
+  + [ ] parseFloat()
+  + [ ] parseInt()
+  + [X] peek()
+  + [X] print()
+  + [X] println()
+  + [X] read()
+  + [X] readBytes()
+  + [ ] readBytesUntil()
+  + [ ] readString()
+  + [ ] readStringUntil()
+  + [X] setTimeout()
+  + [ ] write()
+  + [ ] serialEvent()
+- [ ] String Object
+PROGMEM, USB and Stream aren't implemented and likely never will be
+** Other functions
+change voltage of pin
+#+BEGIN_SRC C++
+an_set_voltage(pin, voltage)
+#+END_SRC
+
+Change voltage of pin from console imput
+#+BEGIN_SRC C++
+an_request_voltage(pin)
+#+END_SRC
+
+take input from console and put it in Serial buffer
+#+BEGIN_SRC C++
+Serial.an_take_input()
+#+END_SRC
+* More Examples
+** Serial and AnalogRead:
+#+BEGIN_SRC C++
+#define AN_BOARD_NANO
+#define AN_IMPL
+#include "ArduinoNative.hpp"
+
+int analogpin = A7;
+
+void setup()
+{
+        Serial.begin(9600);
+        pinMode(analogpin, INPUT);
+}
+
+void loop()
+{
+#ifdef ArduinoNative
+        an_request_voltage(analogpin);
+#endif
+        Serial.println(analogRead(analogpin));
+        delay(30);
+}
+#+END_SRC
+Output:
+#+BEGIN_SRC
+set voltage of pin 21 to: 3.0
+614
+#+END_SRC
+** Serial Read
+#+BEGIN_SRC C++
+#define AN_IMPL
+#include "ArduinoNative.hpp"
+
+void setup()
+{
+        Serial.begin(9600);
+#ifdef ArduinoNative
+        Serial.an_take_input();
+#endif
+}
+
+void loop()
+{
+        while(Serial.available()) {
+                Serial.println((char)Serial.read());
+        }
+}
+#+END_SRC
+Output:
+#+BEGIN_SRC
+ArduinoNative is requesting Serial input: hello
+h
+e
+l
+l
+o
+#+END_SRC
