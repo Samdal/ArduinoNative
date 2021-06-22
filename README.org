@@ -152,16 +152,12 @@ Serial.an_take_input()
 #+END_SRC
 ** Extra debug features
 Debug features can be enabled by defining the following macros
-- AN_DEBUG_ALL
-Enables everything below
-- AN_DEBUG_DIGITALREAD
-Prints a message to console when digitalRead is called
-- AN_DEBUG_DIGITALWRITE
-Prints a message to console when digitalWrite is called
-- AN_DEBUG_ANALOGREAD
-Prints a message to console when analogRead is called
-- AN_DEBUG_ANALOGWRITE
-Prints a message to console when analogWrite is called
+- AN_DEBUG_ALL: Enables everything below
+- AN_DEBUG_DIGITALREAD: Prints a message to console when digitalRead is called
+- AN_DEBUG_DIGITALWRITE: Prints a message to console when digitalWrite is called
+- AN_DEBUG_ANALOGREAD: Prints a message to console when analogRead is called
+- AN_DEBUG_ANALOGWRITE: Prints a message to console when analogWrite is called
+- AN_DEBUG_TIMESTAMP: Prints a timestamp in milliseconds in front of all debug messages
 * More examples
 ** Serial and AnalogRead
 #+BEGIN_SRC C++
@@ -225,4 +221,55 @@ e
 l
 l
 o
+#+END_SRC
+** millis()
+#+BEGIN_SRC C++
+#define AN_DEBUG_DIGITALWRITE
+#define AN_DEBUG_TIMESTAMP
+#define AN_IMPL
+#include "ArduinoNative.hpp"
+
+#define LED1 5
+#define LED2 6
+#define LED1_DELAY 1000 // delay in ms
+#define LED2_DELAY 2000 // delay in ms
+unsigned long previous_LED1_change;
+unsigned long previous_LED2_change;
+
+
+void setup()
+{
+        pinMode(LED1, OUTPUT);
+        pinMode(LED2, OUTPUT);
+}
+
+void loop()
+{
+        unsigned long t = millis();
+        // turn on LED1 every second
+        if (t - previous_LED1_change >= LED1_DELAY) {
+                digitalWrite(LED1, !digitalRead(LED1));
+                previous_LED1_change = t;
+        }
+        // turn on LED2 every other second
+        if (t - previous_LED2_change >= LED2_DELAY) {
+                digitalWrite(LED2, !digitalRead(LED2));
+                previous_LED2_change = t;
+        }
+}
+#+END_SRC
+Output:
+#+BEGIN_SRC
+500ms | Pin: 6 is now HIGH
+1000ms | Pin: 5 is now HIGH
+1000ms | Pin: 6 is now LOW
+1500ms | Pin: 6 is now HIGH
+2000ms | Pin: 5 is now LOW
+2000ms | Pin: 6 is now LOW
+2500ms | Pin: 6 is now HIGH
+3000ms | Pin: 5 is now HIGH
+3000ms | Pin: 6 is now LOW
+3500ms | Pin: 6 is now HIGH
+4000ms | Pin: 5 is now LOW
+4000ms | Pin: 6 is now LOW
 #+END_SRC

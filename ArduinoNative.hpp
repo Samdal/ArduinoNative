@@ -40,6 +40,7 @@ typedef enum  {
 #define AN_DEBUG_DIGITALWRITE
 #define AN_DEBUG_ANALOGREAD
 #define AN_DEBUG_ANALOGWRITE
+#define AN_DEBUG_TIMESTAMP
 #endif
 
 /* BOARD DEFINITIONS */
@@ -253,20 +254,20 @@ public:
         template <typename T>
         size_t println(T val)
         {
-                size_t byteswritten = print(val);
+                size_t byteswritten = this->print(val);
                 std::cout << "\n";
                 return byteswritten + 1;
         }
         template <typename T>
         size_t println(T val, an_print_format_t format)
         {
-                size_t byteswritten = print(val, format);
+                size_t byteswritten = this->print(val, format);
                 std::cout << "\n";
                 return byteswritten + 1;
         }
         size_t println(float val, uint8_t format)
         {
-                size_t byteswritten = print(val, format);
+                size_t byteswritten = this->print(val, format);
                 std::cout << "\n";
                 return byteswritten + 1;
         }
@@ -300,7 +301,11 @@ bool digitalRead(uint8_t pin)
                 exit(1);
         }
 #ifdef AN_DEBUG_DIGITALREAD
-        std::cout << "Read pin: " << std::to_string(pin) << " is " << std::to_string(an_pin_voltage[pin] > 3) << "\n";
+#ifdef AN_DEBUG_TIMESTAMP
+        std::cout << millis() << "ms | ";
+#endif
+        std::cout << "Read pin: " << std::to_string(pin) << " is "
+                  << (an_pin_voltage[pin] > 3 ? "HIGH" : "LOW") << "\n";
 #endif
         return an_pin_voltage[pin] > 3;
 }
@@ -314,7 +319,11 @@ void digitalWrite(uint8_t pin, bool val)
         an_pin_cycle[pin] = val * 255;
         an_pin_voltage[pin] = val * 5.0;
 #ifdef AN_DEBUG_DIGITALWRITE
-        std::cout << "Pin: " << std::to_string(pin) << " is now " << std::to_string(an_pin_voltage[pin] > 3)  << "\n";
+#ifdef AN_DEBUG_TIMESTAMP
+        std::cout << millis() << "ms | ";
+#endif
+        std::cout << "Pin: " << std::to_string(pin) << " is now "
+                  << (an_pin_voltage[pin] > 3 ? "HIGH" : "LOW")  << "\n";
 #endif
 }
 void pinMode(uint8_t pin, an_pin_mode mode)
@@ -340,7 +349,11 @@ uint16_t analogRead(uint8_t pin)
         uint16_t val = map(an_pin_voltage[pin], 0.0, 5.0, 0, 1023);
         val = constrain(val, 0, 1023);
 #ifdef AN_DEBUG_ANALOGREAD
-        std::cout << "Analog pin: " << std::to_string(pin) << " is " << std::to_string(val) << "\n";
+#ifdef AN_DEBUG_TIMESTAMP
+        std::cout << millis() << "ms | ";
+#endif
+        std::cout << "Analog pin: " << std::to_string(pin) << " is "
+                  << std::to_string(val) << "\n";
 #endif
         return val;
 }
@@ -355,7 +368,11 @@ void analogWrite(uint8_t pin, uint8_t val)
         an_pin_cycle[pin] = val;
         an_pin_voltage[pin] = map(val, 0, 255, 0.0, 5.0);
 #ifdef AN_DEBUG_ANALOGWRITE
-        std::cout << "Duty cycle on pin: " << std::to_string(pin) << " is now " << std::to_string(an_pin_cycle[pin]) << "\n";
+#ifdef AN_DEBUG_TIMESTAMP
+        std::cout << millis() << "ms | ";
+#endif
+        std::cout << "Duty cycle on pin: " << std::to_string(pin) << " is now "
+                  << std::to_string(an_pin_cycle[pin]) << "\n";
 #endif
 }
 
