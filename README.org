@@ -2,11 +2,11 @@
 #+AUTHOR: Halvard Samdal
 
 * What is ArduinoNative?
-Arduino native allows you to run arduino code without arduino.
-ArduinoNative does not attempt to emulate or simulate an arduino, it is a simple header only implementation of the Arduino library in order to test and debug arduino code.
+Arduino native allows you to run Arduino code without Arduino.
+ArduinoNative does not attempt to emulate or simulate an Arduino, it is a simple header only implementation of the Arduino library in order to test and debug Arduino code.
 Not only do you have the ability to use your favorite IDE with fancy code suggestions, you can even use a debugger to step through your code.
 * Getting started
-1. Download and install requiered tools to build C++ on your machine
+1. Download and install required tools to build C++ on your machine
 2. Create a new C++ project and place ArduinoNative.hpp in that directory
 3. Define AN_IMPL in one and only one of your source files
 4. Include ArduinoNative.hpp
@@ -29,13 +29,16 @@ void loop()
         delay(1000);
 }
 #+END_SRC
+
+#+RESULTS:
+
 [[#more-examples][More Examples]]
-* Available functions
+* Features
 Note that some functions are not implemented exactly like Arduino has them.
-For example Serial.print and prinln can't print in byte representation yet.
-** Implimented from Arduino Library:
+For example Serial.print and println can't print in byte representation yet.
+** Implemented from Arduino library:
 Note that less important functions haven't been tested that much
-- [X] Digital I/O()
+- [X] Digital I/O
   + [X] digitalRead()
   + [X] digitalWrite()
   + [X] pinMode()
@@ -45,7 +48,7 @@ Note that less important functions haven't been tested that much
   + [ ] analogReference()
 - [ ] Advanced I/O
   + [ ] noTone()
-  + [ ] pulseIn()
+  + [ ] pulsing)
   + [ ] pulseInLong()
   + [ ] shiftIn()
   + [ ] shiftOut()
@@ -93,9 +96,9 @@ Note that less important functions haven't been tested that much
   + [X] bitWrite()
   + [X] highByte()
   + [X] lowByte()
-- [X] External Interrupts
-  + [X] attachInterrupt()
-  + [X] detachInterrupt()
+- [ ] External Interrupts
+  + [ ] attachInterrupt()
+  + [ ] detachInterrupt()
 - [ ] Interrupts
   + [ ] interrupts()
   + [ ] noInterrupts()
@@ -123,21 +126,38 @@ Note that less important functions haven't been tested that much
 - [ ] String Object
 PROGMEM, USB and Stream aren't implemented and likely never will be
 ** Other functions
-Change voltage of pin
+It is recommended that you encapsulate these non-Arduino functions with some macro guards.
+This prevents you from having to remove them when actually compile for an Arduino.
+#+BEGIN_SRC C++
+#ifdef ArduinoNative
+// this will only be compiled if ArduinoNative is used
+#endif
+#+END_SRC
+*** Change voltage of pin
 #+BEGIN_SRC C++
 an_set_voltage(pin, voltage)
 #+END_SRC
-
-Change voltage of pin from console imput
+*** Change voltage of pin from console input
 #+BEGIN_SRC C++
 an_request_voltage(pin)
 #+END_SRC
-
-Take input from console and put it in Serial buffer
+*** Take input from console and put it in Serial buffer
 #+BEGIN_SRC C++
 Serial.an_take_input()
 #+END_SRC
-* More Examples
+** Extra debug features
+Debug features can be enabled by defining the following macros
+*** AN_DEBUG_ALL
+Enables everything below
+*** AN_DEBUG_DIGITALREAD
+Prints a message to console when digitalRead is called
+*** AN_DEBUG_DIGITALWRITE
+Prints a message to console when digitalWrite is called
+*** AN_DEBUG_ANALOGREAD
+Prints a message to console when analogRead is called
+*** AN_DEBUG_ANALOGWRITE
+Prints a message to console when analogWrite is called
+* More examples
 ** Serial and AnalogRead
 #+BEGIN_SRC C++
 #define AN_BOARD_NANO
@@ -157,16 +177,22 @@ void loop()
 #ifdef ArduinoNative
         an_request_voltage(analogpin);
 #endif
-        Serial.println(analogRead(analogpin));
+        unsigned val = analogRead(analogpin);
+        Serial.print("Read value ");
+        Serial.println(val);
+        float voltage = map(val, 0, 1023, 0.0, 5.0);
+        Serial.print("Voltage on pin is: ");
+        Serial.println(voltage);
         delay(30);
 }
 #+END_SRC
 Output:
 #+BEGIN_SRC
-set voltage of pin 21 to: 3.0
-614
+set voltage of pin 21 to: 3.2
+Read value 654
+Voltage on pin is: 3.19648
 #+END_SRC
-** Serial Read
+** Serial read
 #+BEGIN_SRC C++
 #define AN_IMPL
 #include "ArduinoNative.hpp"
@@ -181,9 +207,8 @@ void setup()
 
 void loop()
 {
-        while(Serial.available()) {
+        while(Serial.available())
                 Serial.println((char)Serial.read());
-        }
 }
 #+END_SRC
 Output:

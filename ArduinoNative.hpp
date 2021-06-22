@@ -93,7 +93,7 @@ unsigned long millis(void);
 
 // Math
 #define constrain(x, a, b) ({x < a ? a : x; x > b ? b : x;})
-#define map(x, fL, fH, tL, tH) (lround((x - fL) * (tH - tL) / (fH - fL) + tL))
+#define map(x, fL, fH, tL, tH) ((x - fL) * (tH - tL) / (fH - fL) + tL)
 #define max(a, b) (a > b ? a : b)
 #define min(a, b) (a < b ? a : b)
 #define sq(x) (x*x)
