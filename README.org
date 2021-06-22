@@ -251,7 +251,7 @@ void loop()
                 digitalWrite(LED1, !digitalRead(LED1));
                 previous_LED1_change = t;
         }
-        // turn on LED2 every other second
+        // turn on LED2 every half a second
         if (t - previous_LED2_change >= LED2_DELAY) {
                 digitalWrite(LED2, !digitalRead(LED2));
                 previous_LED2_change = t;
