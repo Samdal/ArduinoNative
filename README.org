@@ -30,14 +30,19 @@ void loop()
 }
 #+END_SRC
 
-#+RESULTS:
-
 [[#more-examples][More Examples]]
+* Supported boards
+- Arduino Uno
+- Arduino Pro or Pro Mini
+- Arduino Nano
+Choose board by defining a macro
+#+BEGIN_SRC C++
+#define AN_BOARD_PRO
+#+END_SRC
+If no board is defined it will default to Arduino Uno
 * Features
-Note that some functions are not implemented exactly like Arduino has them.
-For example Serial.print and println can't print in byte representation yet.
-** Implemented from Arduino library:
-Note that less important functions haven't been tested that much
+** Implemented from Arduino library
+Note that less important functions haven't been tested that much.
 - [X] Digital I/O
   + [X] digitalRead()
   + [X] digitalWrite()
@@ -147,15 +152,15 @@ Serial.an_take_input()
 #+END_SRC
 ** Extra debug features
 Debug features can be enabled by defining the following macros
-*** AN_DEBUG_ALL
+- AN_DEBUG_ALL
 Enables everything below
-*** AN_DEBUG_DIGITALREAD
+- AN_DEBUG_DIGITALREAD
 Prints a message to console when digitalRead is called
-*** AN_DEBUG_DIGITALWRITE
+- AN_DEBUG_DIGITALWRITE
 Prints a message to console when digitalWrite is called
-*** AN_DEBUG_ANALOGREAD
+- AN_DEBUG_ANALOGREAD
 Prints a message to console when analogRead is called
-*** AN_DEBUG_ANALOGWRITE
+- AN_DEBUG_ANALOGWRITE
 Prints a message to console when analogWrite is called
 * More examples
 ** Serial and AnalogRead
@@ -182,7 +187,7 @@ void loop()
         Serial.println(val);
         float voltage = map(val, 0, 1023, 0.0, 5.0);
         Serial.print("Voltage on pin is: ");
-        Serial.println(voltage);
+        Serial.println(voltage, 2);
         delay(30);
 }
 #+END_SRC
@@ -190,7 +195,8 @@ Output:
 #+BEGIN_SRC
 set voltage of pin 21 to: 3.2
 Read value 654
-Voltage on pin is: 3.19648
+Voltage on pin is: 3.20
+...
 #+END_SRC
 ** Serial read
 #+BEGIN_SRC C++

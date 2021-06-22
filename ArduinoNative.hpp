@@ -1,27 +1,35 @@
 #ifndef ArduinoNative
 #define ArduinoNative
 
-#include <iostream>
 #include <algorithm>
-#include <sstream>
-#include <chrono>
-#include <thread>
-#include <stdint.h>
+#include <bitset>
 #include <cstring>
 #include <cstdlib>
 #include <ctype.h>
 #include <cmath>
+#include <chrono>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <stdint.h>
 #include <string>
+#include <thread>
 
 /* CONSTANTS */
 #define String std::string
 #define LOW 0
 #define HIGH 1
-enum {
+typedef enum {
         INPUT,
         OUTPUT,
         INPUT_PULLUP
 } an_pin_mode;
+typedef enum  {
+        BIN,
+        OCT,
+        DEC,
+        HEX
+} an_print_format_t;
 
 #define byte uint8_t
 #define word uint16_t
@@ -35,7 +43,12 @@ enum {
 #endif
 
 /* BOARD DEFINITIONS */
-#if defined(AN_BOARD_NANO) || defined(AN_BOARD_PRO_MINI)
+
+#ifdef AN_BOARD_PRO_MINI
+#define AN_BOARD_PRO
+#endif
+
+#if defined(AN_BOARD_NANO) || defined(AN_BOARD_PRO)
 
 #define MAX_PINS 21
 
@@ -71,7 +84,7 @@ float an_pin_voltage[MAX_PINS] = {0};
 // Digital I/O
 bool digitalRead(uint8_t pin);
 void digitalWrite(uint8_t pin, bool value);
-#define pinMode(pin, mode)
+void pinMode(uint8_t pin, an_pin_mode mode);
 
 // Analog I/O
 uint16_t analogRead(uint8_t pin);
@@ -203,13 +216,61 @@ public:
                 return s.str().length();
         }
         template <typename T>
+        size_t print(T val, an_print_format_t format)
+        {
+                std::stringstream s;
+                switch (format) {
+                case BIN: {
+                        std::bitset<sizeof(val)*8> bits(val);
+                        std::cout << bits;
+                        s << bits;
+                        return s.str().length();
+                } case DEC: {
+                        long value = (long)val;
+                        std::cout << value;
+                        s << value;
+                        return s.str().length();
+                } case HEX: {
+                        long value = (long)val;
+                        std::cout << std::hex << value;
+                        s << std::hex << value;
+                        return s.str().length();
+                } case OCT: {
+                        long value = (long)val;
+                        std::cout << std::oct << value;
+                        s << std::oct << value;
+                        return s.str().length();
+                }}
+                return 0;
+        }
+        size_t print(float val, uint8_t decimals)
+        {
+                std::cout << std::fixed << std::setprecision(decimals) << val;
+                std::stringstream s;
+                s << std::fixed << std::setprecision(decimals) << val;
+                return s.str().length();
+        }
+        template <typename T>
         size_t println(T val)
         {
-                std::cout << val << std::endl;
-                std::stringstream s;
-                s << val;
-                return s.str().length() + 1;
+                size_t byteswritten = print(val);
+                std::cout << "\n";
+                return byteswritten + 1;
         }
+        template <typename T>
+        size_t println(T val, an_print_format_t format)
+        {
+                size_t byteswritten = print(val, format);
+                std::cout << "\n";
+                return byteswritten + 1;
+        }
+        size_t println(float val, uint8_t format)
+        {
+                size_t byteswritten = print(val, format);
+                std::cout << "\n";
+                return byteswritten + 1;
+        }
+        size_t println() {std::cout << std::endl; return 1;}
 };
 
 void setup();
@@ -255,6 +316,18 @@ void digitalWrite(uint8_t pin, bool val)
 #ifdef AN_DEBUG_DIGITALWRITE
         std::cout << "Pin: " << std::to_string(pin) << " is now " << std::to_string(an_pin_voltage[pin] > 3)  << "\n";
 #endif
+}
+void pinMode(uint8_t pin, an_pin_mode mode)
+{
+        if (pin > MAX_PINS) {
+                std::cout << "ERROR: PIN " << std::to_string(pin) << " IS NOT DEFINED\n";
+                exit(1);
+        }
+        if (mode == INPUT_PULLUP) {
+                an_pin_voltage[pin] == 5.0;
+                an_pin_cycle[pin] == 255;
+        }
+
 }
 
 // Analog I/O
