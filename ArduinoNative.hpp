@@ -116,11 +116,11 @@ unsigned long micros(void);
 unsigned long millis(void);
 
 // Math
-#define constrain(x, a, b) ({x = x < a ? a : x; x = x > b ? b : x;})
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 #define map(x, fL, fH, tL, tH) ((x - fL) * (tH - tL) / (fH - fL) + tL)
-#define max(a, b) (a > b ? a : b)
-#define min(a, b) (a < b ? a : b)
-#define sq(x) (x*x)
+#define min(a,b) ((a)<(b)?(a):(b))
+#define max(a,b) ((a)>(b)?(a):(b))
+#define sq(x) ((x)*(x))
 
 // Characthers
 #define isAlpha(thisChar)            (isalpha(thisChar))
@@ -143,17 +143,18 @@ inline long random(long min, long max);
 inline void randomSeed(unsigned long seed);
 
 // Bits and Bytes
-#define bit(n) (1 << n)
-#define bitClear(x, n) (x & ~(1 << n))
-#define bitRead(x, n) (x & (1 << n))
-#define bitSet(x, n) (x |= (1 << n))
-#define bitWrite(x, n, b) (x = ((x & ~(1 << n)) | (b << n)))
-#define highByte(x) ((uint8_t) ((x) >> 8))
-#define lowByte(x) ((uint8_t) ((x) & 0xff))
+#define bit(b) (1UL << (b))
+#define bitRead(value, bit) (((value) >> (bit)) & 0x01)
+#define bitSet(value, bit) ((value) |= (1UL << (bit)))
+#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
+#define bitToggle(value, bit) ((value) ^= (1UL << (bit)))
+#define bitWrite(value, bit, bitvalue) ((bitvalue) ? bitSet(value, bit) : bitClear(value, bit))
+#define highByte(w) ((uint8_t) ((w) >> 8))
+#define lowByte(w) ((uint8_t) ((w) & 0xff))
 
 // Interrupts
 #define digitalPinToInterrupt(pin) (pin)
-void attachInterrupt(const uint8_t pin, void (*intpointer), const an_int_mode_t mode);
+void attachInterrupt(const uint8_t pin, void(*intpointer)(void), const an_int_mode_t mode);
 void  detachInterrupt(const uint8_t pin);
 inline void interrupts(void);
 inline void noInterrupts(void);
@@ -170,14 +171,14 @@ typedef enum {
         an_int_pin,
 } an_pin_types_t;
 typedef struct an_int {
-        void (*intpointer)();
+        void (*intpointer)(void);
         an_int_mode_t mode;
 } an_int_t;
 std::unordered_map<uint8_t, an_int_t> an_ints;
 bool an_interrupts_enabled = true;
 
-void setup();
-void loop();
+void setup(void);
+void loop(void);
 void an_is_pin_defined(const uint8_t pin, const an_pin_types_t = an_digital);
 
 class an_serial
@@ -335,7 +336,7 @@ bool digitalRead(uint8_t pin)
 
 void digitalWrite(uint8_t pin, bool val)
 {
-        an_set_voltage(pin, val * 5.0);
+        an_set_voltage(pin, val * 5.0f);
 #ifdef AN_DEBUG_DIGITALWRITE
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
@@ -347,14 +348,14 @@ void digitalWrite(uint8_t pin, bool val)
 void pinMode(uint8_t pin, an_pin_mode_t mode)
 {
         if (mode == INPUT_PULLUP)
-                an_pin_voltage[pin] = 5.0;
+                an_pin_voltage[pin] = 5.0f;
 }
 
 // Analog I/O
 uint16_t analogRead(uint8_t pin)
 {
         an_is_pin_defined(pin);
-        uint16_t val = map(an_pin_voltage[pin], 0.0, 5.0, 0, 1023);
+        uint16_t val = map(an_pin_voltage[pin], 0.0f, 5.0f, 0, 1023);
         val = constrain(val, 0, 1023);
 #ifdef AN_DEBUG_ANALOGREAD
 #ifdef AN_DEBUG_TIMESTAMP
@@ -368,7 +369,7 @@ uint16_t analogRead(uint8_t pin)
 void analogWrite(uint8_t pin, uint8_t val)
 {
         val = constrain(val, 0, 255);
-        an_set_voltage(pin,  map(val, 0, 255, 0.0, 5.0));
+        an_set_voltage(pin,  map(val, 0, 255, 0.0f, 5.0f));
 #ifdef AN_DEBUG_ANALOGWRITE
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
@@ -438,7 +439,7 @@ void randomSeed(long seed) {srand(seed);}
 void attachInterrupt(uint8_t pin, void (*intpointer)(), an_int_mode_t mode)
 {
         an_is_pin_defined(pin, an_int_pin);
-        an_ints[pin] = (an_int_t){.intpointer = intpointer, .mode = mode,};
+        an_ints[pin] = {intpointer, mode};
 }
 void  detachInterrupt(const uint8_t pin)
 {
