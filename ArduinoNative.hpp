@@ -221,7 +221,11 @@ public:
                                 break;
                         buff << (char)this->read();
                 }
-                std::strcpy(readbuffer, buff.str().c_str());
+#if defined _WIN32
+                strcpy_s(readbuffer, length * sizeof(char), buff.str().c_str());
+#else
+                strcpy(readbuffer, buff.str().c_str());
+#endif
                 return buff.str().length();
         }
         size_t readBytesUntill(char readbuffer[], unsigned length)
@@ -232,7 +236,11 @@ public:
                                 break;
                         buff << (char)this->read();
                 }
-                std::strcpy(readbuffer, buff.str().c_str());
+#if defined _WIN32
+                strcpy_s(readbuffer, length * sizeof(char), buff.str().c_str());
+#else
+                strcpy(readbuffer, buff.str().c_str());
+#endif
                 return buff.str().length();
         }
         template <typename T>
@@ -355,7 +363,7 @@ void pinMode(uint8_t pin, an_pin_mode_t mode)
 uint16_t analogRead(uint8_t pin)
 {
         an_is_pin_defined(pin);
-        uint16_t val = map(an_pin_voltage[pin], 0.0f, 5.0f, 0, 1023);
+        uint16_t val = (uint16_t)lround(map(an_pin_voltage[pin], 0.0f, 5.0f, 0, 1023));
         val = constrain(val, 0, 1023);
 #ifdef AN_DEBUG_ANALOGREAD
 #ifdef AN_DEBUG_TIMESTAMP
@@ -422,12 +430,12 @@ void delayMicroseconds(unsigned long microseconds)
 unsigned long micros()
 {
         auto duration = std::chrono::system_clock::now().time_since_epoch();
-        return std::chrono::duration_cast<std::chrono::microseconds>(duration).count() - an_start_time_µs;
+        return (unsigned long)std::chrono::duration_cast<std::chrono::microseconds>(duration).count() - an_start_time_µs;
 }
 unsigned long millis()
 {
         auto duration = std::chrono::system_clock::now().time_since_epoch();
-        return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() - an_start_time_ms;
+        return (unsigned long)std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() - an_start_time_ms;
 }
 
 // Random Numbers
