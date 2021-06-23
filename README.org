@@ -101,12 +101,12 @@ Note that less important functions haven't been tested that much.
   + [X] bitWrite()
   + [X] highByte()
   + [X] lowByte()
-- [ ] External Interrupts
-  + [ ] attachInterrupt()
-  + [ ] detachInterrupt()
-- [ ] Interrupts
-  + [ ] interrupts()
-  + [ ] noInterrupts()
+- [X] External Interrupts
+  + [X] attachInterrupt()
+  + [X] detachInterrupt()
+- [X] Interrupts
+  + [X] interrupts()
+  + [X] noInterrupts()
 - [-] Serial
   + [X] available()
   + [X] availableForWrite()
@@ -222,7 +222,7 @@ l
 l
 o
 #+END_SRC
-** millis()
+** millis() and specific debug modes
 #+BEGIN_SRC C++
 #define AN_DEBUG_DIGITALWRITE
 #define AN_DEBUG_TIMESTAMP
@@ -272,4 +272,47 @@ Output:
 3500ms | Pin: 6 is now HIGH
 4000ms | Pin: 5 is now LOW
 4000ms | Pin: 6 is now LOW
+#+END_SRC
+** Interrupts
+HIGH and LOW interrupt modes don't work, only CHANGE, RISING and FALLING
+#+BEGIN_SRC C++
+#define AN_IMPL
+#include "ArduinoNative.hpp"
+
+unsigned long switchdelay;
+unsigned short count;
+
+void interrupt()
+{
+        Serial.print("INTERRUPT");
+        Serial.println(count);
+}
+
+void setup() {
+        Serial.begin(9600);
+        attachInterrupt(digitalPinToInterrupt(2), interrupt, CHANGE);
+}
+
+// count 5 times, each time toggling pin 2
+// after 5 times detach interrupt
+void loop() {
+        unsigned long t = millis();
+        if (t - switchdelay >= 1000) {
+#ifdef ArduinoNative
+                an_set_voltage(2, !digitalRead(2) * 5.0);
+#endif
+                switchdelay = t;
+                count++;
+                if (count == 5)
+                        detachInterrupt(digitalPinToInterrupt(2));
+        }
+}
+#+END_SRC
+Output:
+#+BEGIN_SRC
+INTERRUPT0
+INTERRUPT1
+INTERRUPT2
+INTERRUPT3
+INTERRUPT4
 #+END_SRC

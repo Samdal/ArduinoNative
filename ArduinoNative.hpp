@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 /* CONSTANTS */
 #define String std::string
@@ -23,14 +24,18 @@ typedef enum {
         INPUT,
         OUTPUT,
         INPUT_PULLUP
-} an_pin_mode;
+} an_pin_mode_t;
 typedef enum  {
         BIN,
         OCT,
         DEC,
         HEX
 } an_print_format_t;
-
+typedef enum : uint64_t {
+        CHANGE,
+        RISING,
+        FALLING
+} an_int_mode_t;
 #define byte uint8_t
 #define word uint16_t
 
@@ -44,64 +49,69 @@ typedef enum  {
 #endif
 
 /* BOARD DEFINITIONS */
-
 #ifdef AN_BOARD_PRO_MINI
 #define AN_BOARD_PRO
 #endif
 
+/* ↓ Arduino PRO / Pro Mini and Arduino NANO ↓ */
 #if defined(AN_BOARD_NANO) || defined(AN_BOARD_PRO)
 
-#define MAX_PINS 21
+#define AN_MAX_PINS 21
 
-#define LED_BUILTIN 13
-#define A0 14
-#define A1 15
-#define A2 16
-#define A3 17
-#define A4 18
-#define A5 19
-#define A6 20
-#define A7 21
+enum {
+        LED_BUILTIN = 13,
+        A0 = 14,
+        A1 = 15,
+        A2 = 16,
+        A3 = 17,
+        A4 = 18,
+        A5 = 19,
+        A6 = 20,
+        A7 = 21,
+} an_pins;
 
+/* ↑ Arduino PRO / Pro Mini and Arduino NANO ↑ */
 #else // Default is Arduino Uno
+/* ↓ Arduino UNO ↓ */
 
-#define MAX_PINS 19
+#define AN_MAX_PINS 19
 
-#define LED_BUILTIN 13
-#define A0 14
-#define A1 15
-#define A2 16
-#define A3 17
-#define A4 18
-#define A5 19
+enum {
+        LED_BUILTIN = 13,
+        A0 = 14,
+        A1 = 15,
+        A2 = 16,
+        A3 = 17,
+        A4 = 18,
+        A5 = 19,
+} an_pins;
 
+/* ↑ Arduino UNO ↑ */
 #endif
 
-uint8_t an_pin_cycle[MAX_PINS] = {0};
-float an_pin_voltage[MAX_PINS] = {0};
+// pin voltages
+float an_pin_voltage[AN_MAX_PINS] = {0};
 
 /* FUNCTION DEFINITIONS */
 
+// non-arduino functions
+void an_set_voltage(const uint8_t pin, const float voltage);
+
 // Digital I/O
-bool digitalRead(uint8_t pin);
-void digitalWrite(uint8_t pin, bool value);
-void pinMode(uint8_t pin, an_pin_mode mode);
+bool digitalRead(const uint8_t pin);
+void digitalWrite(const uint8_t pin, const bool value);
+void pinMode(const uint8_t pin, const an_pin_mode_t mode);
 
 // Analog I/O
-uint16_t analogRead(uint8_t pin);
+uint16_t analogRead(const uint8_t pin);
 // void analogReference();
-void analogWrite(uint8_t pin, uint8_t value);
-void an_set_voltage(uint8_t pin, float voltage);
+void analogWrite(const uint8_t pin, const uint8_t value);
 
 // Advanced I/O
-// void noTone(uint8_t pin);
-// unsigned long pulseIn(uint8_t pin, bool value);
-// unsigned long pulseInLong(uint8_t pin, bool value);
-// unsigned long tone(uint8_t pin, unsigned frequenzy);
 
 //Time
-inline void delay(unsigned long milliseconds);
-inline void delayMicroseconds(unsigned long microseconds);
+inline void delay(const unsigned long milliseconds);
+inline void delayMicroseconds(const unsigned long microseconds);
 unsigned long micros(void);
 unsigned long millis(void);
 
@@ -111,23 +121,21 @@ unsigned long millis(void);
 #define max(a, b) (a > b ? a : b)
 #define min(a, b) (a < b ? a : b)
 #define sq(x) (x*x)
-// the rest are included in math.h
-// the same with all of the trigonomitry functions
 
 // Characthers
-inline bool isAlpha(char thisChar);
-inline bool isAlphaNumeric(char thisChar);
-inline bool isAscii(char thisChar);
-inline bool isControl(char thisChar);
-inline bool isDigit(char thisChar);
-inline bool isGraph(char thisChar);
-inline bool isHexadecimalDigit(char thisChar);
-inline bool isLowerCase(char thisChar);
-inline bool isPrintable(char thisChar);
-inline bool isPunct(char thisChar);
-inline bool isSpace(char thisChar);
-inline bool isUpperCase(char thisChar);
-inline bool isWhitespace(char thisChar);
+#define isAlpha(thisChar)            (isalpha(thisChar))
+#define isAlphaNumeric(thisChar)     (isalnum(thisChar))
+#define isAscii(thisChar)            (true)
+#define isControl(thisChar)          (iscntrl(thisChar))
+#define isDigit(thisChar)            (isdigit(thisChar))
+#define isGraph(thisChar)            (isgraph(thisChar))
+#define isHexadecimalDigit(thisChar) (isxdigit(thisChar))
+#define isLowerCase(thisChar)        (islower(thisChar))
+#define isPrintable(thisChar)        (isprint(thisChar))
+#define isPunct(thisChar)            (ispunct(thisChar))
+#define isSpace(thisChar)            (isspace(thisChar))
+#define isUpperCase(thisChar)        (isupper(thisChar))
+#define isWhitespace(thisChar)       (isspace(thisChar))
 
 // Random Numbers
 inline long random(long max);
@@ -143,25 +151,39 @@ inline void randomSeed(unsigned long seed);
 #define highByte(x) ((uint8_t) ((x) >> 8))
 #define lowByte(x) ((uint8_t) ((x) & 0xff))
 
-// External Interrupts
-
 // Interrupts
+#define digitalPinToInterrupt(pin) (pin)
+void attachInterrupt(const uint8_t pin, void (*intpointer), const an_int_mode_t mode);
+void  detachInterrupt(const uint8_t pin);
+inline void interrupts(void);
+inline void noInterrupts(void);
 
 // Implimentation
 #ifdef AN_IMPL
 
-// Communication
+unsigned long an_start_time_ms;
+unsigned long an_start_time_µs;
+typedef enum {
+        an_analog,
+        an_digital,
+        an_pwm,
+        an_int_pin,
+} an_pin_types_t;
+typedef struct an_int {
+        void (*intpointer)();
+        an_int_mode_t mode;
+} an_int_t;
+std::unordered_map<uint8_t, an_int_t> an_ints;
+bool an_interrupts_enabled = true;
+
+void setup();
+void loop();
+void an_is_pin_defined(const uint8_t pin, const an_pin_types_t = an_digital);
+
 class an_serial
 {
-private:
         std::string buffer;
 public:
-        void an_take_input()
-        {
-                std::cout << "ArduinoNative is requesting Serial input: ";
-                std::cin >> buffer;
-        }
-
         inline size_t available() {return buffer.length();}
         inline size_t availableForWrite() {return SIZE_MAX;}
         inline void begin(unsigned speed) {}
@@ -169,6 +191,11 @@ public:
         inline void end() {}
         inline void flush() {}
         inline void setTimeout(long new_time) {}
+        void an_take_input()
+        {
+                std::cout << "ArduinoNative is requesting Serial input: ";
+                std::cin >> buffer;
+        }
         int peek()
         {
                 std::string buffrev = buffer;
@@ -207,7 +234,6 @@ public:
                 std::strcpy(readbuffer, buff.str().c_str());
                 return buff.str().length();
         }
-        //float parseFloat() {}
         template <typename T>
         size_t print(T val)
         {
@@ -217,7 +243,7 @@ public:
                 return s.str().length();
         }
         template <typename T>
-        size_t print(T val, an_print_format_t format)
+        size_t print(const T val, an_print_format_t format)
         {
                 std::stringstream s;
                 switch (format) {
@@ -244,7 +270,7 @@ public:
                 }}
                 return 0;
         }
-        size_t print(float val, uint8_t decimals)
+        size_t print(const float val, const uint8_t decimals)
         {
                 std::cout << std::fixed << std::setprecision(decimals) << val;
                 std::stringstream s;
@@ -252,20 +278,20 @@ public:
                 return s.str().length();
         }
         template <typename T>
-        size_t println(T val)
+        size_t println(const T val)
         {
                 size_t byteswritten = this->print(val);
                 std::cout << "\n";
                 return byteswritten + 1;
         }
         template <typename T>
-        size_t println(T val, an_print_format_t format)
+        size_t println(const T val, const an_print_format_t format)
         {
                 size_t byteswritten = this->print(val, format);
                 std::cout << "\n";
                 return byteswritten + 1;
         }
-        size_t println(float val, uint8_t format)
+        size_t println(const float val, const uint8_t format)
         {
                 size_t byteswritten = this->print(val, format);
                 std::cout << "\n";
@@ -274,125 +300,112 @@ public:
         size_t println() {std::cout << std::endl; return 1;}
 };
 
-void setup();
-void loop();
-
-unsigned long an_start_time_ms;
-unsigned long an_start_time_µs;
 an_serial Serial;
 
 // start program
 int main()
 {
-        // Initialize
         an_start_time_ms = millis();
         an_start_time_µs = micros();
 
-        // run setup() and loop()
         setup();
         for (;;) loop();
+}
+
+void an_is_pin_defined(uint8_t pin, an_pin_types_t type)
+{
+        if (pin > AN_MAX_PINS) {
+                std::cout << "ERROR: PIN " << std::to_string(pin) << " IS NOT DEFINED\n";
+                exit(1);
+        }
 }
 
 // Digital I/O
 bool digitalRead(uint8_t pin)
 {
-        if (pin > MAX_PINS) {
-                std::cout << "ERROR: PIN " << std::to_string(pin) << " IS NOT DEFINED\n";
-                exit(1);
-        }
+        bool res = an_pin_voltage[pin] > 3;
 #ifdef AN_DEBUG_DIGITALREAD
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
 #endif
-        std::cout << "Read pin: " << std::to_string(pin) << " is "
-                  << (an_pin_voltage[pin] > 3 ? "HIGH" : "LOW") << "\n";
+        std::cout << "Read pin: " << pin << " is " << res ? "HIGH\n" : "LOW\n";
 #endif
-        return an_pin_voltage[pin] > 3;
+        return res;
 }
 
 void digitalWrite(uint8_t pin, bool val)
 {
-        if (pin > MAX_PINS) {
-                std::cout << "ERROR: PIN " << std::to_string(pin) << " IS NOT DEFINED\n";
-                exit(1);
-        }
-        an_pin_cycle[pin] = val * 255;
-        an_pin_voltage[pin] = val * 5.0;
+        an_set_voltage(pin, val * 5.0);
 #ifdef AN_DEBUG_DIGITALWRITE
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
 #endif
-        std::cout << "Pin: " << std::to_string(pin) << " is now "
-                  << (an_pin_voltage[pin] > 3 ? "HIGH" : "LOW")  << "\n";
+        std::cout << "Pin: " << pin << " is now " << val ? "HIGH\n" : "LOW\n";
 #endif
 }
-void pinMode(uint8_t pin, an_pin_mode mode)
-{
-        if (pin > MAX_PINS) {
-                std::cout << "ERROR: PIN " << std::to_string(pin) << " IS NOT DEFINED\n";
-                exit(1);
-        }
-        if (mode == INPUT_PULLUP) {
-                an_pin_voltage[pin] == 5.0;
-                an_pin_cycle[pin] == 255;
-        }
 
+void pinMode(uint8_t pin, an_pin_mode_t mode)
+{
+        if (mode == INPUT_PULLUP)
+                an_pin_voltage[pin] == 5.0;
 }
 
 // Analog I/O
 uint16_t analogRead(uint8_t pin)
 {
-        if (pin > MAX_PINS) {
-                std::cout << "ERROR: PIN " << pin << " IS NOT DEFINED\n";
-                exit(1);
-        }
+        an_is_pin_defined(pin);
         uint16_t val = map(an_pin_voltage[pin], 0.0, 5.0, 0, 1023);
         val = constrain(val, 0, 1023);
 #ifdef AN_DEBUG_ANALOGREAD
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
 #endif
-        std::cout << "Analog pin: " << std::to_string(pin) << " is "
-                  << std::to_string(val) << "\n";
+        std::cout << "Analog pin: " << pin << " is " << val << "\n";
 #endif
         return val;
 }
 
 void analogWrite(uint8_t pin, uint8_t val)
 {
-        if (pin > MAX_PINS) {
-                std::cout << "ERROR: PIN " << pin << " IS NOT DEFINED\n";
-                exit(1);
-        }
         val = constrain(val, 0, 255);
-        an_pin_cycle[pin] = val;
-        an_pin_voltage[pin] = map(val, 0, 255, 0.0, 5.0);
+        an_set_voltage(pin,  map(val, 0, 255, 0.0, 5.0));
 #ifdef AN_DEBUG_ANALOGWRITE
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
 #endif
-        std::cout << "Duty cycle on pin: " << std::to_string(pin) << " is now "
-                  << std::to_string(an_pin_cycle[pin]) << "\n";
+        std::cout << "Duty cycle on pin: " << pin << " is now " << val << "\n";
 #endif
 }
 
 void an_set_voltage(uint8_t pin, float voltage)
 {
-        if (pin > MAX_PINS) {
-                std::cout << "ERROR: PIN " << std::to_string(pin) << " IS NOT DEFINED\n";
-                exit(1);
-        }
+        an_is_pin_defined(pin);
+        bool is_on = an_pin_voltage[pin] > 3;
+        bool turn_on = voltage > 3;
+        if (an_interrupts_enabled && an_ints.find(pin) != an_ints.end())
+                switch(an_ints[pin].mode) {
+                case CHANGE:
+                        if (is_on != turn_on)
+                                an_ints[pin].intpointer();
+                        break;
+                case RISING:
+                        if (!is_on && turn_on)
+                                an_ints[pin].intpointer();
+                        break;
+                case FALLING:
+                        if (is_on && !turn_on)
+                                an_ints[pin].intpointer();
+                        break;
+                }
         an_pin_voltage[pin] = voltage;
 }
 
 void an_request_voltage(uint8_t pin)
 {
-        if (pin > MAX_PINS) {
-                std::cout << "ERROR: PIN " << std::to_string(pin) << " IS NOT DEFINED\n";
-                exit(1);
-        }
         std::cout << "set voltage of pin " << std::to_string(pin) << " to: ";
-        std::cin >> an_pin_voltage[pin];
+        float voltage;
+        std::cin >> voltage;
+        an_set_voltage(pin, voltage);
 }
 
 // Time
@@ -416,25 +429,25 @@ unsigned long millis()
         return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() - an_start_time_ms;
 }
 
-// Characters
-bool isAlpha(char thisChar)            {return isalpha(thisChar);}
-bool isAlphaNumeric(char thisChar)     {return isalnum(thisChar);}
-bool isAscii(char thisChar)            {return true;}
-bool isControl(char thisChar)          {return iscntrl(thisChar);}
-bool isDigit(char thisChar)            {return isdigit(thisChar);}
-bool isGraph(char thisChar)            {return isgraph(thisChar);}
-bool isHexadecimalDigit(char thisChar) {return isxdigit(thisChar);}
-bool isLowerCase(char thisChar)        {return islower(thisChar);}
-bool isPrintable(char thisChar)        {return isprint(thisChar);}
-bool isPunct(char thisChar)            {return ispunct(thisChar);}
-bool isSpace(char thisChar)            {return isspace(thisChar);}
-bool isUpperCase(char thisChar)        {return isupper(thisChar);}
-bool isWhitespace(char thisChar)       {return isspace(thisChar);}
-
 // Random Numbers
 long random(long max) {return rand() % max;}
 long random(long min, long max) {return min + rand() % (max - min);}
 void randomSeed(long seed) {srand(seed);}
+
+// External Interrupts
+void attachInterrupt(uint8_t pin, void (*intpointer)(), an_int_mode_t mode)
+{
+        an_is_pin_defined(pin, an_int_pin);
+        an_ints[pin] = (an_int_t){.intpointer = intpointer, .mode = mode,};
+}
+void  detachInterrupt(const uint8_t pin)
+{
+        auto int_pos = an_ints.find(pin);
+        if (int_pos != an_ints.end())
+                an_ints.erase(int_pos);
+}
+void interrupts() {an_interrupts_enabled = true;}
+void noInterrupts() {an_interrupts_enabled = false;}
 
 #undef AN_IMPL
 #endif // AN_IMPL
