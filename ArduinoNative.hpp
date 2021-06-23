@@ -337,7 +337,7 @@ bool digitalRead(uint8_t pin)
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
 #endif
-        std::cout << "Read pin: " << pin << " is " << res ? "HIGH\n" : "LOW\n";
+        std::cout << "Read pin: " << std::to_string(pin) << " is " << (res ? "HIGH\n" : "LOW\n");
 #endif
         return res;
 }
@@ -349,7 +349,7 @@ void digitalWrite(uint8_t pin, bool val)
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
 #endif
-        std::cout << "Pin: " << pin << " is now " << val ? "HIGH\n" : "LOW\n";
+        std::cout << "Pin: " << std::to_string(pin) << " is now " << (val ? "HIGH\n" : "LOW\n");
 #endif
 }
 
@@ -369,7 +369,7 @@ uint16_t analogRead(uint8_t pin)
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
 #endif
-        std::cout << "Analog pin: " << pin << " is " << val << "\n";
+        std::cout << "Analog pin: " << std::to_string(pin) << " is " << val << "\n";
 #endif
         return val;
 }
@@ -382,7 +382,7 @@ void analogWrite(uint8_t pin, uint8_t val)
 #ifdef AN_DEBUG_TIMESTAMP
         std::cout << millis() << "ms | ";
 #endif
-        std::cout << "Duty cycle on pin: " << pin << " is now " << val << "\n";
+        std::cout << "Duty cycle on pin: " << std::to_string(pin) << " is now " << val << "\n";
 #endif
 }
 
