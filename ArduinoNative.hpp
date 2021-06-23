@@ -68,7 +68,7 @@ enum {
         A5 = 19,
         A6 = 20,
         A7 = 21,
-} an_pins;
+};
 
 /* ↑ Arduino PRO / Pro Mini and Arduino NANO ↑ */
 #else // Default is Arduino Uno
@@ -84,7 +84,7 @@ enum {
         A3 = 17,
         A4 = 18,
         A5 = 19,
-} an_pins;
+};
 
 /* ↑ Arduino UNO ↑ */
 #endif
@@ -116,7 +116,7 @@ unsigned long micros(void);
 unsigned long millis(void);
 
 // Math
-#define constrain(x, a, b) ({x < a ? a : x; x > b ? b : x;})
+#define constrain(x, a, b) ({x = x < a ? a : x; x = x > b ? b : x;})
 #define map(x, fL, fH, tL, tH) ((x - fL) * (tH - tL) / (fH - fL) + tL)
 #define max(a, b) (a > b ? a : b)
 #define min(a, b) (a < b ? a : b)
@@ -347,7 +347,7 @@ void digitalWrite(uint8_t pin, bool val)
 void pinMode(uint8_t pin, an_pin_mode_t mode)
 {
         if (mode == INPUT_PULLUP)
-                an_pin_voltage[pin] == 5.0;
+                an_pin_voltage[pin] = 5.0;
 }
 
 // Analog I/O
