@@ -42,11 +42,9 @@ Choose board by defining a macro
 If no board is defined it will default to Arduino Uno
 * Features
 ** Implemented from Arduino library
+[[https://www.arduino.cc/reference/en/][Arduino Library Reference]].
 Note that less important functions haven't been tested that much.
-- [X] Digital I/O
-  + [X] digitalRead()
-  + [X] digitalWrite()
-  + [X] pinMode()
+*** Unfinished / not implemented
 - [-] Analog I/O
   + [X] analogRead()
   + [X] analogWrite()
@@ -58,55 +56,6 @@ Note that less important functions haven't been tested that much.
   + [ ] shiftIn()
   + [ ] shiftOut()
   + [ ] tone()
-- [X] Time
-  + [X] delay()
-  + [X] delayMicroseconds()
-  + [X] micros()
-  + [X] millis()
-- [X] Math
-  + [X] abs()
-  + [X] constrain()
-  + [X] map()
-  + [X] max()
-  + [X] min()
-  + [X] pow()
-  + [X] sq()
-  + [X] sqrt()
-- [X] Trigonometry
-  + [X] cos()
-  + [X] sin()
-  + [X] tan()
-- [X] Characters
-  + [X] isAlpha()
-  + [X] isAlphaNumeric()
-  + [X] isAscii()
-  + [X] isControl()
-  + [X] isDigit()
-  + [X] isGraph()
-  + [X] isHexadecimalDigit()
-  + [X] isLowerCase()
-  + [X] isPrintable()
-  + [X] isPunct()
-  + [X] isSpace()
-  + [X] isUpperCase()
-  + [X] isWhitespace()
-- [X] Random Numbers
-  + [X] random()
-  + [X] randomSeed()
-- [X] Bits and Bytes
-  + [X] bit()
-  + [X] bitClear()
-  + [X] bitRead()
-  + [X] bitSet()
-  + [X] bitWrite()
-  + [X] highByte()
-  + [X] lowByte()
-- [X] External Interrupts
-  + [X] attachInterrupt()
-  + [X] detachInterrupt()
-- [X] Interrupts
-  + [X] interrupts()
-  + [X] noInterrupts()
 - [-] Serial
   + [X] available()
   + [X] availableForWrite()
@@ -272,9 +221,10 @@ Output:
 3500ms | Pin: 6 is now HIGH
 4000ms | Pin: 5 is now LOW
 4000ms | Pin: 6 is now LOW
+...
 #+END_SRC
 ** Interrupts
-HIGH and LOW interrupt modes don't work, only CHANGE, RISING and FALLING
+Note that HIGH and LOW interrupt modes don't work, only CHANGE, RISING and FALLING
 #+BEGIN_SRC C++
 #define AN_IMPL
 #include "ArduinoNative.hpp"
