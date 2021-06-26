@@ -11,7 +11,6 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <charconv>
 #include <thread>
 #include <unordered_map>
 
@@ -295,8 +294,7 @@ public:
         {
                 if (!skip_alpha(lookahead, false, ignore))
                         return 0;
-                double res = 0.0;
-                std::from_chars(buffer.data(), buffer.data() + buffer.size(), res);
+                double res = std::stof(buffer);
                 remove_digit(false);
                 return (long)res;
         }
@@ -304,8 +302,7 @@ public:
         {
                 if (!skip_alpha(lookahead, true, ignore))
                         return 0.0f;
-                double res = 0.0;
-                std::from_chars(buffer.data(), buffer.data() + buffer.size(), res);
+                double res = std::stof(buffer);
                 remove_digit(true);
                 return (float)res;
         }
