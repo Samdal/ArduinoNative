@@ -1,8 +1,7 @@
-#+TITLE: ArduinoNative
 #+AUTHOR: Halvard Samdal
 
 * What is ArduinoNative?
-Arduino native allows you to run Arduino code without Arduino.
+ArduinoNative allows you to run Arduino code without Arduino.
 ArduinoNative does not attempt to emulate or simulate an Arduino, it is a simple header only implementation of the Arduino library in order to test and debug Arduino code.
 Not only do you have the ability to use your favorite IDE with fancy code suggestions, you can even use a debugger to step through your code.
 * Getting started
@@ -58,6 +57,7 @@ Note that less important functions haven't been tested that much.
   + [ ] tone()
 - [ ] String Object
 **** Exceptions
+- HIGH and LOW interrupt modes don’t work, only CHANGE, RISING and FALLING
 - serialEvent() is only supported on GCC and Clang, as it uses a GCC extension.
 - PROGMEM, USB and Stream aren't implemented and likely never will be
 ** Other functions
@@ -205,7 +205,6 @@ Output:
 ...
 #+END_SRC
 ** Interrupts
-Note that HIGH and LOW interrupt modes don't work, only CHANGE, RISING and FALLING
 #+BEGIN_SRC C++
 #define AN_IMPL
 #include "ArduinoNative.hpp"
