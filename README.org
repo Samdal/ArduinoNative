@@ -56,29 +56,10 @@ Note that less important functions haven't been tested that much.
   + [ ] shiftIn()
   + [ ] shiftOut()
   + [ ] tone()
-- [-] Serial
-  + [X] available()
-  + [X] availableForWrite()
-  + [X] begin()
-  + [X] end()
-  + [ ] find()
-  + [ ] findUntil()
-  + [X] flush()
-  + [ ] parseFloat()
-  + [ ] parseInt()
-  + [X] peek()
-  + [X] print()
-  + [X] println()
-  + [X] read()
-  + [X] readBytes()
-  + [ ] readBytesUntil()
-  + [ ] readString()
-  + [ ] readStringUntil()
-  + [X] setTimeout()
-  + [ ] write()
-  + [ ] serialEvent()
 - [ ] String Object
-PROGMEM, USB and Stream aren't implemented and likely never will be
+**** Exceptions
+- serialEvent() is only supported on GCC and Clang, as it uses a GCC extension.
+- PROGMEM, USB and Stream aren't implemented and likely never will be
 ** Other functions
 It is recommended that you encapsulate these non-Arduino functions with some macro guards.
 This prevents you from having to remove them when actually compile for an Arduino.

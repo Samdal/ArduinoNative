@@ -4,15 +4,14 @@
 #include <algorithm>
 #include <bitset>
 #include <cstring>
-#include <cstdlib>
 #include <ctype.h>
 #include <cmath>
 #include <chrono>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <stdint.h>
 #include <string>
+#include <charconv>
 #include <thread>
 #include <unordered_map>
 
@@ -30,12 +29,17 @@ typedef enum  {
         OCT,
         DEC,
         HEX
-} an_print_format_t;
+} an_print_fmt_t;
 typedef enum : uint64_t {
         CHANGE,
         RISING,
         FALLING
 } an_int_mode_t;
+typedef enum {
+        SKIP_NONE,
+        SKIP_WHITESPACE,
+        SKIP_ALL,
+} LookaheadMode;
 #define byte uint8_t
 #define word uint16_t
 
@@ -180,71 +184,134 @@ bool an_interrupts_enabled = true;
 void setup(void);
 void loop(void);
 void an_is_pin_defined(const uint8_t pin, const an_pin_types_t = an_digital);
+inline void an_print_timestamp();
+#ifndef _WIN32
+void serialEvent() __attribute__((weak));
+#endif
 
 class an_serial
 {
         std::string buffer;
+        inline bool skip_alpha(LookaheadMode lookahead, bool is_float, char ignore)
+        {
+                while(available()) {
+                        char c = peek();
+                        if (c == ignore){
+                                buffer.erase(buffer.begin());
+                                continue;
+                        }
+                        if ((c == '-') || (c >= '0' && c <= '9') || (is_float && c == '.'))
+                                return true;
+                        switch (lookahead) {
+                        case SKIP_ALL:
+                                buffer.erase(buffer.begin());
+                                break;
+                        case SKIP_NONE:
+                        case SKIP_WHITESPACE:
+                               return true;
+                        }
+                }
+                return false;
+         }
+        inline void remove_digit(bool is_float)
+        {
+                while(available()) {
+                        char c = peek();
+                        if ((c == '-') || (c >= '0' && c <= '9') || (is_float && c == '.'))
+                                buffer.erase(buffer.begin());
+                        else
+                                return;
+                }
+        }
 public:
         inline size_t available() {return buffer.length();}
         inline size_t availableForWrite() {return SIZE_MAX;}
         inline void begin(unsigned speed) {}
         inline void begin(unsigned speed, int config) {}
         inline void end() {}
-        inline void flush() {}
-        inline void setTimeout(long new_time) {}
+        inline void flush() {std::cout << std::flush;}
+        inline void setTimeout(const long new_time) {}
+        inline std::string readString() {std::string str = buffer; buffer.clear(); return str;}
+        inline std::string readStringUntil(const char terminator)
+        {
+                size_t t_pos = buffer.find(terminator);
+                if (t_pos == std::string::npos)
+                        return readString();
+
+                std::string str = buffer;
+                buffer.erase(0, t_pos);
+                str.erase(str.begin() + t_pos, str.end());
+                return str;
+        }
         void an_take_input()
         {
                 std::cout << "ArduinoNative is requesting Serial input: ";
                 std::cin >> buffer;
-        }
-        int peek()
-        {
-                std::string buffrev = buffer;
-                std::reverse(buffrev.begin(), buffrev.end());
-                return buffrev.length() > 0 ? int(buffrev.back()) : 0;
-        }
-        int read()
-        {
-                std::string buffrev = buffer;
-                std::reverse(buffrev.begin(), buffrev.end());
-                int readByte = buffrev.length() > 0 ? int(buffrev.back()) : 0;
-                buffrev.pop_back();
-                std::reverse(buffrev.begin(), buffrev.end());
-                buffer = buffrev;
-                return readByte;
-        }
-        size_t readBytes(char readbuffer[], unsigned length)
-        {
-                std::stringstream buff;
-                for (; length != 0; length--) {
-                        if (!this->available())
-                                break;
-                        buff << (char)this->read();
-                }
-#if defined _WIN32
-                strcpy_s(readbuffer, length * sizeof(char), buff.str().c_str());
-#else
-                strcpy(readbuffer, buff.str().c_str());
+#ifndef _WIN32
+                if (serialEvent)
+                        serialEvent();
 #endif
-                return buff.str().length();
         }
-        size_t readBytesUntill(char readbuffer[], unsigned length)
+        uint8_t peek() {return buffer.length() > 0 ? uint8_t(buffer.c_str()[0]) : 0;}
+        inline uint8_t read()
         {
-                std::stringstream buff;
-                for (; length != 0; length--) {
-                        if (!this->available())
-                                break;
-                        buff << (char)this->read();
-                }
-#if defined _WIN32
-                strcpy_s(readbuffer, length * sizeof(char), buff.str().c_str());
-#else
-                strcpy(readbuffer, buff.str().c_str());
-#endif
-                return buff.str().length();
+                uint8_t read_byte = peek();
+                buffer.erase(buffer.begin());
+                return read_byte;
         }
+        size_t readBytes(char* buffer, const unsigned length, const bool is_until = false, const char terminator = '\0')
+        {
+                size_t count = 0;
+                for(; count < length; count++) {
+                        uint8_t c = read();
+                        if (c < 0 || (is_until && c == terminator))
+                                break;
+                        *buffer++ = (char)c;
+                }
+                return count;
+        }
+        inline size_t readBytesUntil(const char terminator, char* buffer, const unsigned length)
+        {
+                return readBytes(buffer, length, true, terminator);
+        }
+        bool find(const char* target, const size_t len = 1)
+        {
+                size_t t_pos = buffer.find(target);
+                if (t_pos == std::string::npos) {
+                        buffer.clear();
+                        return false;
+                }
+                buffer.erase(0, t_pos);
+                return true;
+        }
+        bool findUntil(const char* target, const char* terminal)
+        {
+                bool res = find(target);
+                if (res)
+                        find(terminal);
+                return res;
+        }
+        long parseInt(const LookaheadMode lookahead = SKIP_ALL, const char ignore = '\n')
+        {
+                if (!skip_alpha(lookahead, false, ignore))
+                        return 0;
+                double res = 0.0;
+                std::from_chars(buffer.data(), buffer.data() + buffer.size(), res);
+                remove_digit(false);
+                return (long)res;
+        }
+        float parseFloat(const LookaheadMode lookahead = SKIP_ALL, const char ignore = '\n')
+        {
+                if (!skip_alpha(lookahead, true, ignore))
+                        return 0.0f;
+                double res = 0.0;
+                std::from_chars(buffer.data(), buffer.data() + buffer.size(), res);
+                remove_digit(true);
+                return (float)res;
+        }
+
         template <typename T>
-        size_t print(T val)
+        size_t print(const T val)
         {
                 std::cout << val;
                 std::stringstream s;
@@ -252,20 +319,15 @@ public:
                 return s.str().length();
         }
         template <typename T>
-        size_t print(const T val, an_print_format_t format)
+        size_t print(const T val, const an_print_fmt_t fmt)
         {
                 std::stringstream s;
-                switch (format) {
+                switch (fmt) {
                 case BIN: {
-                        std::bitset<sizeof(val)*8> bits(val);
-                        std::cout << bits;
-                        s << bits;
-                        return s.str().length();
+                        std::bitset<sizeof(val) * 8> bits(val);
+                        return print(bits);
                 } case DEC: {
-                        long value = (long)val;
-                        std::cout << value;
-                        s << value;
-                        return s.str().length();
+                        return print((long)val);
                 } case HEX: {
                         long value = (long)val;
                         std::cout << std::hex << value;
@@ -279,7 +341,14 @@ public:
                 }}
                 return 0;
         }
-        size_t print(const float val, const uint8_t decimals)
+        size_t print(const char* buff, const an_print_fmt_t fmt)
+        {
+                size_t res = 0;
+                for (unsigned int i = 0; i < strlen(buff); i++)
+                        res += print((uint8_t)buff[i], fmt);
+                return res;
+        }
+        size_t print(const double val, const uint8_t decimals)
         {
                 std::cout << std::fixed << std::setprecision(decimals) << val;
                 std::stringstream s;
@@ -287,26 +356,23 @@ public:
                 return s.str().length();
         }
         template <typename T>
-        size_t println(const T val)
-        {
-                size_t byteswritten = this->print(val);
-                std::cout << "\n";
-                return byteswritten + 1;
-        }
+        inline size_t write(const T val) {return print(val, HEX) / 2;}
+
+        inline size_t println() {std::cout << "\n"; return 1;}
+
         template <typename T>
-        size_t println(const T val, const an_print_format_t format)
+        inline size_t println(const T val) {return print(val) + println();}
+
+        template <typename T>
+        inline size_t println(const T val, const an_print_fmt_t fmt)
         {
-                size_t byteswritten = this->print(val, format);
-                std::cout << "\n";
-                return byteswritten + 1;
+                return print(val, fmt) + println();
         }
-        size_t println(const float val, const uint8_t format)
+
+        inline size_t println(const double val, const uint8_t fmt)
         {
-                size_t byteswritten = this->print(val, format);
-                std::cout << "\n";
-                return byteswritten + 1;
+                return print(val, fmt) + println();
         }
-        size_t println() {std::cout << std::endl; return 1;}
 };
 
 an_serial Serial;
@@ -321,6 +387,7 @@ int main()
         for (;;) loop();
 }
 
+/* ArduinoNative reused functions */
 void an_is_pin_defined(uint8_t pin, an_pin_types_t type)
 {
         if (pin > AN_MAX_PINS) {
@@ -328,15 +395,19 @@ void an_is_pin_defined(uint8_t pin, an_pin_types_t type)
                 exit(1);
         }
 }
+void an_print_timestamp()
+{
+#ifdef AN_DEBUG_TIMESTAMP
+        std::cout << millis() << "ms | ";
+#endif
+}
 
 // Digital I/O
 bool digitalRead(uint8_t pin)
 {
         bool res = an_pin_voltage[pin] > 3;
 #ifdef AN_DEBUG_DIGITALREAD
-#ifdef AN_DEBUG_TIMESTAMP
-        std::cout << millis() << "ms | ";
-#endif
+        an_print_timestamp();
         std::cout << "Read pin: " << std::to_string(pin) << " is " << (res ? "HIGH\n" : "LOW\n");
 #endif
         return res;
@@ -346,9 +417,7 @@ void digitalWrite(uint8_t pin, bool val)
 {
         an_set_voltage(pin, val * 5.0f);
 #ifdef AN_DEBUG_DIGITALWRITE
-#ifdef AN_DEBUG_TIMESTAMP
-        std::cout << millis() << "ms | ";
-#endif
+        an_print_timestamp();
         std::cout << "Pin: " << std::to_string(pin) << " is now " << (val ? "HIGH\n" : "LOW\n");
 #endif
 }
@@ -366,9 +435,7 @@ uint16_t analogRead(uint8_t pin)
         uint16_t val = (uint16_t)lround(map(an_pin_voltage[pin], 0.0f, 5.0f, 0, 1023));
         val = constrain(val, 0, 1023);
 #ifdef AN_DEBUG_ANALOGREAD
-#ifdef AN_DEBUG_TIMESTAMP
-        std::cout << millis() << "ms | ";
-#endif
+        an_print_timestamp();
         std::cout << "Analog pin: " << std::to_string(pin) << " is " << val << "\n";
 #endif
         return val;
@@ -379,9 +446,7 @@ void analogWrite(uint8_t pin, uint8_t val)
         val = constrain(val, 0, 255);
         an_set_voltage(pin,  map(val, 0, 255, 0.0f, 5.0f));
 #ifdef AN_DEBUG_ANALOGWRITE
-#ifdef AN_DEBUG_TIMESTAMP
-        std::cout << millis() << "ms | ";
-#endif
+        an_print_timestamp();
         std::cout << "Duty cycle on pin: " << std::to_string(pin) << " is now " << val << "\n";
 #endif
 }
@@ -391,6 +456,8 @@ void an_set_voltage(uint8_t pin, float voltage)
         an_is_pin_defined(pin);
         bool is_on = an_pin_voltage[pin] > 3;
         bool turn_on = voltage > 3;
+
+        /* If pin has interrupt attached */
         if (an_interrupts_enabled && an_ints.find(pin) != an_ints.end())
                 switch(an_ints[pin].mode) {
                 case CHANGE:
@@ -406,6 +473,7 @@ void an_set_voltage(uint8_t pin, float voltage)
                                 an_ints[pin].intpointer();
                         break;
                 }
+
         an_pin_voltage[pin] = voltage;
 }
 
@@ -418,13 +486,13 @@ void an_request_voltage(uint8_t pin)
 }
 
 // Time
-void delay(unsigned long milliseconds)
+void delay(unsigned long ms)
 {
-        std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
-void delayMicroseconds(unsigned long microseconds)
+void delayMicroseconds(unsigned long µs)
 {
-        std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
+        std::this_thread::sleep_for(std::chrono::microseconds(µs));
 }
 
 unsigned long micros()
