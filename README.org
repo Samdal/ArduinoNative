@@ -2,7 +2,7 @@
 
 * What is ArduinoNative?
 ArduinoNative allows you to run Arduino code without Arduino.
-ArduinoNative does not attempt to emulate or simulate an Arduino, it is a simple header only implementation of the Arduino library in order to test and debug Arduino code.
+ArduinoNative does not attempt to emulate or simulate an Arduino, it is a simple header-only implementation of the Arduino library in order to test and debug Arduino code.
 Not only do you have the ability to use your favorite IDE with fancy code suggestions, you can even use a debugger to step through your code.
 * Getting started
 1. Download and install required tools to build C++ on your machine
@@ -42,7 +42,7 @@ If no board is defined it will default to Arduino Uno
 * Features
 ** Implemented from Arduino library
 [[https://www.arduino.cc/reference/en/][Arduino Library Reference]].
-Note that less important functions haven't been tested that much.
+Note that less used functions haven't been tested that much.
 *** Unfinished / not implemented
 - [-] Analog I/O
   + [X] analogRead()
@@ -55,8 +55,7 @@ Note that less important functions haven't been tested that much.
   + [ ] shiftIn()
   + [ ] shiftOut()
   + [ ] tone()
-- [ ] String Object
-**** Exceptions
+*** Exceptions
 - HIGH and LOW interrupt modes don’t work, only CHANGE, RISING and FALLING
 - serialEvent() is only supported on GCC and Clang, as it uses a GCC extension.
 - PROGMEM, USB and Stream aren't implemented and likely never will be
@@ -82,12 +81,12 @@ Serial.an_take_input()
 #+END_SRC
 ** Extra debug features
 Debug features can be enabled by defining the following macros
-- AN_DEBUG_ALL: Enables everything below
-- AN_DEBUG_DIGITALREAD: Prints a message to console when digitalRead is called
-- AN_DEBUG_DIGITALWRITE: Prints a message to console when digitalWrite is called
-- AN_DEBUG_ANALOGREAD: Prints a message to console when analogRead is called
-- AN_DEBUG_ANALOGWRITE: Prints a message to console when analogWrite is called
-- AN_DEBUG_TIMESTAMP: Prints a timestamp in milliseconds in front of all debug messages
+- *AN_DEBUG_ALL*: Enables everything below
+- *AN_DEBUG_DIGITALREAD*: Prints a message to console when digitalRead is called
+- *AN_DEBUG_DIGITALWRITE*: Prints a message to console when digitalWrite is called
+- *AN_DEBUG_ANALOGREAD*: Prints a message to console when analogRead is called
+- *AN_DEBUG_ANALOGWRITE*: Prints a message to console when analogWrite is called
+- *AN_DEBUG_TIMESTAMP*: Prints a timestamp in milliseconds in front of all debug messages
 * More examples
 ** Serial and AnalogRead
 #+BEGIN_SRC C++

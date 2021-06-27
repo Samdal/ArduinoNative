@@ -15,7 +15,6 @@
 #include <unordered_map>
 
 /* CONSTANTS */
-#define String std::string
 #define LOW 0
 #define HIGH 1
 typedef enum {
@@ -28,7 +27,7 @@ typedef enum  {
         OCT,
         DEC,
         HEX
-} an_print_fmt_t;
+} an_num_fmt_t;
 typedef enum : uint64_t {
         CHANGE,
         RISING,
@@ -162,6 +161,105 @@ void  detachInterrupt(const uint8_t pin);
 inline void interrupts(void);
 inline void noInterrupts(void);
 
+class String : public std::string {
+public:
+        String() {};
+        template<typename T>
+        String(const T val)
+        {
+                std::stringstream s;
+                s << val;
+                append(s.str());
+        }
+        template <typename T>
+        String(const T val, const an_num_fmt_t fmt)
+        {
+                std::stringstream s = {};
+                switch (fmt) {
+                case BIN: {
+                        std::bitset<sizeof(val) * 8> bits(val);
+                        s << bits;
+                        append(s.str());
+                        return;
+                } case DEC: {
+                        break;
+                } case HEX: {
+                        s << std::hex;
+                        break;
+                } case OCT: {
+                        s << std::oct;
+                        break;
+                }}
+                s << (long)val;
+                append(s.str());
+        }
+        String(const char* buff, const an_num_fmt_t fmt)
+        {
+                for (unsigned int i = 0; i < strlen(buff); i++)
+                        append(String((uint8_t)buff[i], fmt));
+        }
+        String(const double val, const uint8_t decimals)
+        {
+                std::stringstream s;
+                s << std::fixed << std::setprecision(decimals) << val;
+                append(s.str());
+        }
+        inline float toFloat() {return std::stof(c_str());}
+        inline int toInt() {return (int)toFloat();}
+        inline double toDouble() {return std::atof(c_str());}
+
+        inline void getBytes(byte* buf, unsigned len) {strncpy((char*)buf, substr(0, len).c_str(), len);}
+        inline void toCharArray(unsigned char* buf, const unsigned len) {getBytes((byte*)buf, len); buf[len] = '\0';}
+        inline String substring(size_t pos = 0, size_t len = npos) {return substr(pos, len);}
+        inline void toLowerCase()
+        {
+                std::transform(begin(), end(), begin(),
+                        [](char c){return std::tolower(c);});
+        }
+        inline void toUpperCase()
+        {
+                std::transform(begin(), end(), begin(),
+                        [](char c){return std::toupper(c);});
+        }
+        inline char charAt(const unsigned int n) {return at(n);}
+        inline int compareTo(const String str2) {return compare(str2);}
+        template <typename T>
+        inline bool concat(const T val) {append(String(val)); return true;}
+        inline bool startsWith(const String substr) {return rfind(substr, 0) == 0;}
+        inline bool endsWith(const String str) {return compare(length() - str.length(), str.length(), str) == 0;}
+        inline bool equals(const String str2) {return compare(str2) == 0;}
+        bool equalsIgnoreCase(const String str2)
+        {
+                String strlwr = String(c_str());
+                String str2lwr = String(str2.c_str());
+                strlwr.toLowerCase();
+                str2lwr.toLowerCase();
+                return strlwr.compare(str2lwr) == 0;
+        }
+        inline size_t indexOf(const char* val, const size_t from = 0) {return find(val, from);}
+        inline size_t lastIndexOf(const char* val, const size_t from = 0) {return rfind(val, from);}
+        inline void remove(const size_t index, const size_t count = 1) {erase(index, count);}
+        void replace(const String from, const String to)
+        {
+                size_t start_pos = 0;
+                while ((start_pos = find(from, start_pos)) != npos) {
+                        std::string::replace(start_pos, from.length(), to);
+                        start_pos += to.length();
+                }
+        }
+        inline void setCharAt(const size_t index, const char c) {at(index) = c;}
+        void trim()
+        {
+                erase(begin(), std::find_if(begin(), end(), [](char ch) {
+                        return !std::isspace(ch);
+                }));
+                erase(std::find_if(rbegin(), rend(), [](char ch) {
+                        return !std::isspace(ch);
+                }).base(), end());
+        }
+};
+
+
 // Implimentation
 #ifdef AN_IMPL
 
@@ -190,7 +288,8 @@ void serialEvent() __attribute__((weak));
 
 class an_serial
 {
-        std::string buffer;
+private:
+        String buffer;
         inline bool skip_alpha(LookaheadMode lookahead, bool is_float, char ignore)
         {
                 while(available()) {
@@ -230,8 +329,8 @@ public:
         inline void end() {}
         inline void flush() {std::cout << std::flush;}
         inline void setTimeout(const long new_time) {}
-        inline std::string readString() {std::string str = buffer; buffer.clear(); return str;}
-        inline std::string readStringUntil(const char terminator)
+        inline String readString() {String str = buffer; buffer.clear(); return str;}
+        inline String readStringUntil(const char terminator)
         {
                 size_t t_pos = buffer.find(terminator);
                 if (t_pos == std::string::npos)
@@ -258,18 +357,18 @@ public:
                 buffer.erase(buffer.begin());
                 return read_byte;
         }
-        size_t readBytes(char* buffer, const unsigned length, const bool is_until = false, const char terminator = '\0')
+        size_t readBytes(byte* buffer, const unsigned length, const bool is_until = false, const char terminator = '\0')
         {
                 size_t count = 0;
                 for(; count < length; count++) {
                         uint8_t c = read();
                         if (c < 0 || (is_until && c == terminator))
                                 break;
-                        *buffer++ = (char)c;
+                        *buffer++ = c;
                 }
                 return count;
         }
-        inline size_t readBytesUntil(const char terminator, char* buffer, const unsigned length)
+        inline size_t readBytesUntil(const char terminator, byte* buffer, const unsigned length)
         {
                 return readBytes(buffer, length, true, terminator);
         }
@@ -290,86 +389,39 @@ public:
                         find(terminal);
                 return res;
         }
-        long parseInt(const LookaheadMode lookahead = SKIP_ALL, const char ignore = '\n')
+        int parseInt(const LookaheadMode lookahead = SKIP_ALL, const char ignore = '\n')
         {
                 if (!skip_alpha(lookahead, false, ignore))
                         return 0;
-                double res = std::stof(buffer);
+                int res = buffer.toInt();
                 remove_digit(false);
-                return (long)res;
+                return res;
         }
         float parseFloat(const LookaheadMode lookahead = SKIP_ALL, const char ignore = '\n')
         {
                 if (!skip_alpha(lookahead, true, ignore))
                         return 0.0f;
-                double res = std::stof(buffer);
+                float res = buffer.toFloat();
                 remove_digit(true);
-                return (float)res;
-        }
-
-        template <typename T>
-        size_t print(const T val)
-        {
-                std::cout << val;
-                std::stringstream s;
-                s << val;
-                return s.str().length();
-        }
-        template <typename T>
-        size_t print(const T val, const an_print_fmt_t fmt)
-        {
-                std::stringstream s;
-                switch (fmt) {
-                case BIN: {
-                        std::bitset<sizeof(val) * 8> bits(val);
-                        return print(bits);
-                } case DEC: {
-                        return print((long)val);
-                } case HEX: {
-                        long value = (long)val;
-                        std::cout << std::hex << value;
-                        s << std::hex << value;
-                        return s.str().length();
-                } case OCT: {
-                        long value = (long)val;
-                        std::cout << std::oct << value;
-                        s << std::oct << value;
-                        return s.str().length();
-                }}
-                return 0;
-        }
-        size_t print(const char* buff, const an_print_fmt_t fmt)
-        {
-                size_t res = 0;
-                for (unsigned int i = 0; i < strlen(buff); i++)
-                        res += print((uint8_t)buff[i], fmt);
                 return res;
         }
-        size_t print(const double val, const uint8_t decimals)
+        template <typename T> inline size_t print(const T val)
         {
-                std::cout << std::fixed << std::setprecision(decimals) << val;
-                std::stringstream s;
-                s << std::fixed << std::setprecision(decimals) << val;
-                return s.str().length();
+                String s = val;
+                std::cout << s;
+                return s.length();
         }
-        template <typename T>
-        inline size_t write(const T val) {return print(val, HEX) / 2;}
-
-        inline size_t println() {std::cout << "\n"; return 1;}
+        template <typename V, typename F>
+        inline size_t print(const V val, const F fmt)     {return print(String(val, fmt));}
 
         template <typename T>
-        inline size_t println(const T val) {return print(val) + println();}
+        inline size_t write(const T val)                  {return print(val, HEX) / 2;}
 
+        template <typename V, typename F>
+        inline size_t println(const V val, const F fmt)   {return print(val, fmt) + println();}
         template <typename T>
-        inline size_t println(const T val, const an_print_fmt_t fmt)
-        {
-                return print(val, fmt) + println();
-        }
-
-        inline size_t println(const double val, const uint8_t fmt)
-        {
-                return print(val, fmt) + println();
-        }
+        inline size_t println(const T val)                {return print(val) + println();}
+        inline size_t println()                           {std::cout << "\n"; return 1;}
 };
 
 an_serial Serial;
