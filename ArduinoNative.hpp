@@ -47,7 +47,6 @@ typedef enum {
 #define AN_DEBUG_DIGITALWRITE
 #define AN_DEBUG_ANALOGREAD
 #define AN_DEBUG_ANALOGWRITE
-#define AN_DEBUG_TIMESTAMP
 #endif
 
 /* BOARD DEFINITIONS */
@@ -118,10 +117,10 @@ unsigned long micros(void);
 unsigned long millis(void);
 
 // Math
-#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 #define map(x, fL, fH, tL, tH) ((x - fL) * (tH - tL) / (fH - fL) + tL)
 #define min(a,b) ((a)<(b)?(a):(b))
 #define max(a,b) ((a)>(b)?(a):(b))
+#define constrain(x, low, top) (max(min(x, low), top))
 #define sq(x) ((x)*(x))
 
 // Characthers
