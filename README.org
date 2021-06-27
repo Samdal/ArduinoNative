@@ -88,16 +88,16 @@ Debug features can be enabled by defining the following macros
 - *AN_DEBUG_ANALOGREAD*: Prints a message to console when analogRead is called
 - *AN_DEBUG_ANALOGWRITE*: Prints a message to console when analogWrite is called
 * Roadmap
-- ☑️B̶a̶s̶i̶c̶ ̶f̶u̶n̶c̶t̶i̶o̶n̶a̶l̶i̶t̶y̶
-- ☑️D̶e̶b̶u̶g̶ ̶o̶p̶t̶i̶o̶n̶s̶
-- ☑️m̶o̶r̶e̶ ̶c̶o̶m̶p̶l̶e̶t̶e̶ ̶f̶u̶n̶c̶t̶i̶o̶n̶a̶l̶i̶t̶y̶
-- ☑️W̶i̶n̶d̶o̶w̶s̶ ̶s̶u̶p̶p̶o̶r̶t̶
-- ☑️S̶e̶r̶i̶a̶l̶ ̶f̶u̶l̶l̶ ̶f̶u̶n̶c̶t̶i̶o̶n̶a̶l̶i̶t̶y̶
-- ☑️S̶t̶r̶i̶n̶g̶ ̶o̶b̶j̶e̶c̶t̶
-- ☐Complete rest of Arduino Library
-- ☐Support more boards
-- ☐Debug schedules
-- ☐Debug viewer to show pin status instead of Serial
+- B̶a̶s̶i̶c̶ ̶f̶u̶n̶c̶t̶i̶o̶n̶a̶l̶i̶t̶y̶
+- D̶e̶b̶u̶g̶ ̶o̶p̶t̶i̶o̶n̶s̶
+- m̶o̶r̶e̶ ̶c̶o̶m̶p̶l̶e̶t̶e̶ ̶f̶u̶n̶c̶t̶i̶o̶n̶a̶l̶i̶t̶y̶
+- W̶i̶n̶d̶o̶w̶s̶ ̶s̶u̶p̶p̶o̶r̶t̶
+- S̶e̶r̶i̶a̶l̶ ̶f̶u̶l̶l̶ ̶f̶u̶n̶c̶t̶i̶o̶n̶a̶l̶i̶t̶y̶
+- S̶t̶r̶i̶n̶g̶ ̶o̶b̶j̶e̶c̶t̶
+- Complete rest of Arduino Library
+- Support more boards
+- Debug schedules
+- Debug viewer to show pin status instead of Serial
 * More examples
 ** Serial and AnalogRead
 #+BEGIN_SRC C++
