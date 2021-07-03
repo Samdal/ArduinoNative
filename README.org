@@ -251,6 +251,7 @@ Output:
 #+END_SRC
 ** AnalogReference()
 #+BEGIN_SRC C++
+#define AN_DEBUG_TIMESTAMP
 #define AN_IMPL
 #include "ArduinoNative.hpp"
 
