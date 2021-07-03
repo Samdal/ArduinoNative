@@ -8,6 +8,7 @@
 #include <cmath>
 #include <chrono>
 #include <iostream>
+#include <stdio.h>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -17,6 +18,8 @@
 /* CONSTANTS */
 #define LOW 0
 #define HIGH 1
+#define MSBFIRST 0
+#define LSBFIRST 1
 typedef enum {
         INPUT,
         OUTPUT,
@@ -38,6 +41,13 @@ typedef enum {
         SKIP_WHITESPACE,
         SKIP_ALL,
 } LookaheadMode;
+typedef enum {
+        DEFAULT,
+        INTERNAL,
+        INTERNAL1V1,
+        INTERNAL2V56,
+        EXTERNAL,
+} an_reference_t;
 #define byte uint8_t
 #define word uint16_t
 
@@ -90,8 +100,9 @@ enum {
 /* ↑ Arduino UNO ↑ */
 #endif
 
-// pin voltages
+#define AREF 255
 float an_pin_voltage[AN_MAX_PINS] = {0};
+
 
 /* FUNCTION DEFINITIONS */
 
@@ -105,10 +116,16 @@ void pinMode(const uint8_t pin, const an_pin_mode_t mode);
 
 // Analog I/O
 uint16_t analogRead(const uint8_t pin);
-// void analogReference();
+void analogReference(an_reference_t type);
 void analogWrite(const uint8_t pin, const uint8_t value);
 
 // Advanced I/O
+void noTone(const uint8_t pin);
+unsigned long pulseIn(const uint8_t pin, const bool val, const unsigned long timeout);
+unsigned long pulseInLong(const uint8_t pin, const bool val, const unsigned long timeout);
+uint8_t shiftIn(const uint8_t data_pin, const uint8_t clock_pin, const bool bit_order);
+void shiftOut(const uint8_t data_pin, const uint8_t clock_pin, const bool bit_order, const byte value);
+void tone(const uint8_t pin, unsigned hz, unsigned long dur = 0);
 
 //Time
 inline void delay(const unsigned long milliseconds);
@@ -117,10 +134,10 @@ unsigned long micros(void);
 unsigned long millis(void);
 
 // Math
+#define constrain(x, a, b) ({x = x < a ? a : x; x = x > b ? b : x;})
 #define map(x, fL, fH, tL, tH) ((x - fL) * (tH - tL) / (fH - fL) + tL)
 #define min(a,b) ((a)<(b)?(a):(b))
 #define max(a,b) ((a)>(b)?(a):(b))
-#define constrain(x, low, top) (max(min(x, low), top))
 #define sq(x) ((x)*(x))
 
 // Characthers
@@ -276,6 +293,7 @@ typedef struct an_int {
 } an_int_t;
 std::unordered_map<uint8_t, an_int_t> an_ints;
 bool an_interrupts_enabled = true;
+float an_reference_v = 5.0;
 
 void setup(void);
 void loop(void);
@@ -297,7 +315,8 @@ private:
                                 buffer.erase(buffer.begin());
                                 continue;
                         }
-                        if ((c == '-') || (c >= '0' && c <= '9') || (is_float && c == '.'))
+                        if ((c == '-') || (c >= '0' && c <= '9') ||
+                            (is_float && c == '.'))
                                 return true;
                         switch (lookahead) {
                         case SKIP_ALL:
@@ -314,7 +333,8 @@ private:
         {
                 while(available()) {
                         char c = peek();
-                        if ((c == '-') || (c >= '0' && c <= '9') || (is_float && c == '.'))
+                        if ((c == '-') || (c >= '0' && c <= '9') ||
+                            (is_float && c == '.'))
                                 buffer.erase(buffer.begin());
                         else
                                 return;
@@ -438,7 +458,7 @@ int main()
 /* ArduinoNative reused functions */
 void an_is_pin_defined(uint8_t pin, an_pin_types_t type)
 {
-        if (pin > AN_MAX_PINS) {
+        if (pin > AN_MAX_PINS && pin != AREF) {
                 std::cout << "ERROR: PIN " << std::to_string(pin) << " IS NOT DEFINED\n";
                 exit(1);
         }
@@ -480,7 +500,7 @@ void pinMode(uint8_t pin, an_pin_mode_t mode)
 uint16_t analogRead(uint8_t pin)
 {
         an_is_pin_defined(pin);
-        uint16_t val = (uint16_t)lround(map(an_pin_voltage[pin], 0.0f, 5.0f, 0, 1023));
+        uint16_t val = (uint16_t)lround(map(an_pin_voltage[pin], 0.0f, an_reference_v, 0, 1023));
         val = constrain(val, 0, 1023);
 #ifdef AN_DEBUG_ANALOGREAD
         an_print_timestamp();
@@ -499,11 +519,36 @@ void analogWrite(uint8_t pin, uint8_t val)
 #endif
 }
 
+void analogReference(an_reference_t type)
+{
+        switch(type) {
+        case DEFAULT:
+                an_reference_v = 5.0;
+                break;
+        case INTERNAL:
+                an_reference_v = 1.1;
+                break;
+        case INTERNAL1V1:
+                an_reference_v = 1.1;
+                break;
+        case INTERNAL2V56:
+                an_reference_v = 2.56;
+                break;
+        case EXTERNAL:
+                break;
+        }
+}
+
 void an_set_voltage(uint8_t pin, float voltage)
 {
         an_is_pin_defined(pin);
         bool is_on = an_pin_voltage[pin] > 3;
         bool turn_on = voltage > 3;
+        if (pin == AREF) {
+                an_reference_v = voltage;
+                return;
+        }
+
 
         /* If pin has interrupt attached */
         if (an_interrupts_enabled && an_ints.find(pin) != an_ints.end())
@@ -573,6 +618,68 @@ void  detachInterrupt(const uint8_t pin)
 }
 void interrupts() {an_interrupts_enabled = true;}
 void noInterrupts() {an_interrupts_enabled = false;}
+
+// Advanced I/O
+inline void noTone(const uint8_t pin)
+{
+#ifndef _WIN32
+        system("killall \"ffplay\" -q");
+#endif
+}
+unsigned long pulseIn(const uint8_t pin, const bool val, const unsigned long timeout)
+{
+        while (digitalRead(pin) != val);
+        unsigned long before = micros();
+        while (digitalRead(pin) == val && (!timeout && micros() - before >= timeout));
+        unsigned long after = micros();
+        return after - before;
+}
+inline unsigned long pulseInLong(const uint8_t pin, const bool val, const unsigned long timeout)
+{
+        return pulseIn(pin, val, timeout);
+}
+uint8_t shiftIn(const uint8_t data_pin, const uint8_t clock_pin, const uint8_t bit_order)
+{
+        uint8_t value = 0;
+        uint8_t i;
+
+        for (i = 0; i < 8; ++i) {
+                digitalWrite(clock_pin, HIGH);
+                if (bit_order == LSBFIRST)
+                        value |= digitalRead(data_pin) << i;
+                else
+                        value |= digitalRead(data_pin) << (7 - i);
+                digitalWrite(clock_pin, LOW);
+        }
+        return value;
+}
+void shiftOut(const uint8_t data_pin, const uint8_t clock_pin, const bool bit_order, byte val)
+{
+        uint8_t i;
+
+        for (i = 0; i < 8; i++)  {
+                if (bit_order == LSBFIRST) {
+                        digitalWrite(data_pin, val & 1);
+                        val >>= 1;
+                } else {
+                        digitalWrite(data_pin, (val & 128) != 0);
+                        val <<= 1;
+                }
+
+                digitalWrite(clock_pin, HIGH);
+                digitalWrite(clock_pin, LOW);
+        }
+}
+void tone(const uint8_t pin, unsigned hz, unsigned long dur)
+{
+#ifndef _WIN32
+        noTone(pin);
+        hz = constrain(hz, 0, 20000);
+        char ffplay[70];
+        snprintf(ffplay, sizeof(ffplay), "ffplay -f lavfi -i \"sine=frequency=%d\" -nodisp -loglevel quiet &", hz);
+        system(ffplay);
+#endif
+}
 
 #undef AN_IMPL
 #endif // AN_IMPL

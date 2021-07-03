@@ -43,18 +43,6 @@ If no board is defined it will default to Arduino Uno
 ** Implemented from Arduino library
 [[https://www.arduino.cc/reference/en/][Arduino Library Reference]].
 Note that less used functions haven't been tested that much.
-*** Unfinished / not implemented
-- [-] Analog I/O
-  + [X] analogRead()
-  + [X] analogWrite()
-  + [ ] analogReference()
-- [ ] Advanced I/O
-  + [ ] noTone()
-  + [ ] pulsing)
-  + [ ] pulseInLong()
-  + [ ] shiftIn()
-  + [ ] shiftOut()
-  + [ ] tone()
 *** Exceptions
 - HIGH and LOW interrupt modes don’t work, only CHANGE, RISING and FALLING
 - serialEvent() is only supported on GCC and Clang, as it uses a GCC extension.
@@ -88,16 +76,18 @@ Debug features can be enabled by defining the following macros
 - *AN_DEBUG_ANALOGREAD*: Prints a message to console when analogRead is called
 - *AN_DEBUG_ANALOGWRITE*: Prints a message to console when analogWrite is called
 * Roadmap
-- B̶a̶s̶i̶c̶ ̶f̶u̶n̶c̶t̶i̶o̶n̶a̶l̶i̶t̶y̶
-- D̶e̶b̶u̶g̶ ̶o̶p̶t̶i̶o̶n̶s̶
-- m̶o̶r̶e̶ ̶c̶o̶m̶p̶l̶e̶t̶e̶ ̶f̶u̶n̶c̶t̶i̶o̶n̶a̶l̶i̶t̶y̶
-- W̶i̶n̶d̶o̶w̶s̶ ̶s̶u̶p̶p̶o̶r̶t̶
-- S̶e̶r̶i̶a̶l̶ ̶f̶u̶l̶l̶ ̶f̶u̶n̶c̶t̶i̶o̶n̶a̶l̶i̶t̶y̶
-- S̶t̶r̶i̶n̶g̶ ̶o̶b̶j̶e̶c̶t̶
-- Complete rest of Arduino Library
-- Support more boards
-- Debug schedules
-- Debug viewer to show pin status instead of Serial
+- [X] Basic functionality
+- [X] Debug options
+- [X] more complete functionality
+- [X] Windows support
+- [X] Serial full functionality
+- [X] String object
+- [X] Complete rest of Arduino Library
+- [ ] Support for attaching simulated hardware on pins
+- [ ] Attach sine and square(with duty cycle) waves to pins
+- [ ] Debug viewer to show pin status instead of Serial
+- [ ] Support more boards
+- [ ] Implement extra libraries (Servo.h, FastLED, etc)
 * More examples
 ** Serial and AnalogRead
 #+BEGIN_SRC C++
@@ -224,6 +214,9 @@ unsigned short count;
 
 void interrupt()
 {
+#ifdef ArduinoNative
+        an_print_timestamp();
+#endif
         Serial.print("INTERRUPT");
         Serial.println(count);
 }
@@ -250,9 +243,31 @@ void loop() {
 #+END_SRC
 Output:
 #+BEGIN_SRC
-INTERRUPT0
-INTERRUPT1
-INTERRUPT2
-INTERRUPT3
-INTERRUPT4
+1000ms | INTERRUPT0
+2000ms | INTERRUPT1
+3000ms | INTERRUPT2
+4000ms | INTERRUPT3
+5000ms | INTERRUPT4
+#+END_SRC
+** AnalogReference()
+#+BEGIN_SRC C++
+#define AN_IMPL
+#include "ArduinoNative.hpp"
+
+void setup()
+{
+        Serial.begin(9600);
+        analogReference(EXTERNAL);
+#ifdef ArduinoNative
+        an_set_voltage(AREF, 3.3);
+        an_set_voltage(A2, 1.65);
+#endif
+        Serial.println(analogRead(A2));
+}
+
+void loop() {}
+#+END_SRC
+Output:
+#+BEGIN_SRC
+512
 #+END_SRC
