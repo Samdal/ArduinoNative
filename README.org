@@ -41,8 +41,7 @@ Choose board by defining a macro
 If no board is defined it will default to Arduino Uno
 * Features
 ** Implemented from Arduino library
-[[https://www.arduino.cc/reference/en/][Arduino Library Reference]].
-Note that less used functions haven't been tested that much.
+[[https://www.arduino.cc/reference/en/][Arduino Library Reference]]. Note that less used functions haven't been tested that much.
 *** Exceptions
 - HIGH and LOW interrupt modes don’t work, only CHANGE, RISING and FALLING
 - serialEvent() is only supported on GCC and Clang, as it uses a GCC extension.
@@ -55,17 +54,37 @@ This prevents you from having to remove them when actually compile for an Arduin
 // this will only be compiled if ArduinoNative is used
 #endif
 #+END_SRC
-*** Change voltage of pin
+- Set pin voltage
 #+BEGIN_SRC C++
 an_set_voltage(pin, voltage)
 #+END_SRC
-*** Change voltage of pin from console input
+- Set pin voltage from console input
 #+BEGIN_SRC C++
 an_request_voltage(pin)
 #+END_SRC
-*** Take input from console and put it in Serial buffer
+- Take input from console and put it in Serial buffer
 #+BEGIN_SRC C++
 Serial.an_take_input()
+#+END_SRC
+- Print timestamp in ms
+#+BEGIN_SRC C++
+an_print_timestamp(); // example "1530ms | "
+#+END_SRC
+- Attach sine wave to pin
+#+BEGIN_SRC C++
+an_attach_sine(pin, hz = 1, amplitude = 2.5, dc_offset = 2.5, abs = false)
+#+END_SRC
+- Remove sine wave on pin
+#+BEGIN_SRC C++
+an_remove_sine(pin)
+#+END_SRC
+- Attach square wave to pin
+#+BEGIN_SRC C++
+an_attach_square(pin, hz = 1, duty_cycle = 0.5);
+#+END_SRC
+- Remove square wave on pin
+#+BEGIN_SRC C++
+an_remove_square(pin)
 #+END_SRC
 ** Extra debug features
 Debug features can be enabled by defining the following macros
@@ -76,15 +95,9 @@ Debug features can be enabled by defining the following macros
 - *AN_DEBUG_ANALOGREAD*: Prints a message to console when analogRead is called
 - *AN_DEBUG_ANALOGWRITE*: Prints a message to console when analogWrite is called
 * Roadmap
-- [X] Basic functionality
-- [X] Debug options
-- [X] more complete functionality
-- [X] Windows support
-- [X] Serial full functionality
-- [X] String object
-- [X] Complete rest of Arduino Library
-- [ ] Support for attaching simulated hardware on pins
-- [ ] Attach sine and square(with duty cycle) waves to pins
+- [ ] Check for pin type
+- [ ] Attach simulated hardware on pins
+- [ ] Move examples to their own folder
 - [ ] Debug viewer to show pin status instead of Serial
 - [ ] Support more boards
 - [ ] Implement extra libraries (Servo.h, FastLED, etc)
@@ -204,7 +217,7 @@ Output:
 4000ms | Pin: 6 is now LOW
 ...
 #+END_SRC
-** Interrupts
+** Interrupts and an_attach_square
 #+BEGIN_SRC C++
 #define AN_DEBUG_TIMESTAMP
 #define AN_IMPL
@@ -219,36 +232,28 @@ void interrupt()
         an_print_timestamp();
 #endif
         Serial.print("INTERRUPT");
-        Serial.println(count);
+        Serial.println(++count);
+        if (count >= 5)
+                detachInterrupt(2);
 }
 
 void setup() {
+#ifdef ArduinoNative
+        an_attach_square(2);
+#endif
         Serial.begin(9600);
         attachInterrupt(digitalPinToInterrupt(2), interrupt, CHANGE);
 }
 
-// count 5 times, each time toggling pin 2
-// after 5 times detach interrupt
-void loop() {
-        unsigned long t = millis();
-        if (t - switchdelay >= 1000) {
-#ifdef ArduinoNative
-                an_set_voltage(2, !digitalRead(2) * 5.0);
-#endif
-                switchdelay = t;
-                count++;
-                if (count == 5)
-                        detachInterrupt(digitalPinToInterrupt(2));
-        }
-}
+void loop() {}
 #+END_SRC
 Output:
 #+BEGIN_SRC
-1000ms | INTERRUPT0
-2000ms | INTERRUPT1
-3000ms | INTERRUPT2
-4000ms | INTERRUPT3
-5000ms | INTERRUPT4
+500ms | INTERRUPT1
+1001ms | INTERRUPT2
+1500ms | INTERRUPT3
+2001ms | INTERRUPT4
+2500ms | INTERRUPT5
 #+END_SRC
 ** AnalogReference()
 #+BEGIN_SRC C++

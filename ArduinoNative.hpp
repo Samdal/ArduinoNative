@@ -108,6 +108,12 @@ float an_pin_voltage[AN_MAX_PINS] = {0};
 
 // non-arduino functions
 void an_set_voltage(const uint8_t pin, const float voltage);
+void an_request_voltage(const uint8_t pin);
+inline void an_print_timestamp();
+void an_attach_sine(const uint8_t pin, const unsigned hz = 1, const float amp = 2.5, const float dc = 2.5, const bool abs = false);
+void an_remove_sine(const uint8_t pin);
+void an_attach_square(const uint8_t pin, const unsigned hz = 1, const float duty = 0.5);
+void an_remove_square(const uint8_t pin);
 
 // Digital I/O
 bool digitalRead(const uint8_t pin);
@@ -139,6 +145,7 @@ unsigned long millis(void);
 #define min(a,b) ((a)<(b)?(a):(b))
 #define max(a,b) ((a)>(b)?(a):(b))
 #define sq(x) ((x)*(x))
+#define PI 3.14159265
 
 // Characthers
 #define isAlpha(thisChar)            (isalpha(thisChar))
@@ -292,13 +299,16 @@ typedef struct an_int {
         an_int_mode_t mode;
 } an_int_t;
 std::unordered_map<uint8_t, an_int_t> an_ints;
+std::unordered_map<uint8_t, std::thread> an_sines;
+std::unordered_map<uint8_t, bool> an_sines_terminate;
+std::unordered_map<uint8_t, std::thread> an_squares;
+std::unordered_map<uint8_t, bool> an_squares_terminate;
 bool an_interrupts_enabled = true;
 float an_reference_v = 5.0;
 
 void setup(void);
 void loop(void);
 void an_is_pin_defined(const uint8_t pin, const an_pin_types_t = an_digital);
-inline void an_print_timestamp();
 #ifndef _WIN32
 void serialEvent() __attribute__((weak));
 #endif
@@ -607,11 +617,12 @@ void randomSeed(long seed) {srand(seed);}
 // External Interrupts
 void attachInterrupt(uint8_t pin, void (*intpointer)(), an_int_mode_t mode)
 {
-        an_is_pin_defined(pin, an_int_pin);
+        detachInterrupt(pin);
         an_ints[pin] = {intpointer, mode};
 }
 void  detachInterrupt(const uint8_t pin)
 {
+        an_is_pin_defined(pin, an_int_pin);
         auto int_pos = an_ints.find(pin);
         if (int_pos != an_ints.end())
                 an_ints.erase(int_pos);
@@ -622,12 +633,14 @@ void noInterrupts() {an_interrupts_enabled = false;}
 // Advanced I/O
 inline void noTone(const uint8_t pin)
 {
+        an_is_pin_defined(pin);
 #ifndef _WIN32
         system("killall \"ffplay\" -q");
 #endif
 }
 unsigned long pulseIn(const uint8_t pin, const bool val, const unsigned long timeout)
 {
+        an_is_pin_defined(pin);
         while (digitalRead(pin) != val);
         unsigned long before = micros();
         while (digitalRead(pin) == val && (!timeout && micros() - before >= timeout));
@@ -640,6 +653,9 @@ inline unsigned long pulseInLong(const uint8_t pin, const bool val, const unsign
 }
 uint8_t shiftIn(const uint8_t data_pin, const uint8_t clock_pin, const uint8_t bit_order)
 {
+        an_is_pin_defined(data_pin);
+        an_is_pin_defined(clock_pin);
+
         uint8_t value = 0;
         uint8_t i;
 
@@ -655,6 +671,9 @@ uint8_t shiftIn(const uint8_t data_pin, const uint8_t clock_pin, const uint8_t b
 }
 void shiftOut(const uint8_t data_pin, const uint8_t clock_pin, const bool bit_order, byte val)
 {
+        an_is_pin_defined(data_pin);
+        an_is_pin_defined(clock_pin);
+
         uint8_t i;
 
         for (i = 0; i < 8; i++)  {
@@ -672,15 +691,88 @@ void shiftOut(const uint8_t data_pin, const uint8_t clock_pin, const bool bit_or
 }
 void tone(const uint8_t pin, unsigned hz, unsigned long dur)
 {
-#ifndef _WIN32
         noTone(pin);
+#ifndef _WIN32
         hz = constrain(hz, 0, 20000);
         char ffplay[70];
         snprintf(ffplay, sizeof(ffplay), "ffplay -f lavfi -i \"sine=frequency=%d\" -nodisp -loglevel quiet &", hz);
         system(ffplay);
 #endif
 }
+void an_play_sine(const uint8_t pin, const unsigned hz, const float amp, const float dc)
+{
+        for (;;) {
+                if (an_sines_terminate[pin])
+                        return;
+                an_set_voltage(pin, sin(((float)millis() / (1000.0f / (2.0f * PI))) * hz) * amp + dc);
+        }
+}
+void an_play_sine_abs(const uint8_t pin, const unsigned hz, const float amp, const float dc)
+{
+        for (;;) {
+                if (an_sines_terminate[pin])
+                        return;
+                an_set_voltage(pin, fabs(sin(((float)millis() / (1000.0f / (2.0f * PI))) * hz) * amp + dc));
+        }
+}
 
+void an_attach_sine(const uint8_t pin, const unsigned hz, const float amp, const float dc, const bool is_abs)
+{
+        an_remove_sine(pin);
+        an_sines_terminate[pin] = false;
+        if (is_abs) {
+                std::thread sine(an_play_sine_abs, pin, hz, amp, dc);
+                an_sines[pin] = move(sine);
+        } else {
+                std::thread sine(an_play_sine, pin, hz, amp, dc);
+                an_sines[pin] = move(sine);
+        }
+}
+void an_remove_sine(const uint8_t pin)
+{
+        an_is_pin_defined(pin);
+        auto sine_pos = an_sines.find(pin);
+        if (sine_pos != an_sines.end()) {
+                an_sines_terminate[pin] = true;
+                an_sines[pin].join();
+                an_sines.erase(sine_pos);
+        }
+}
+
+void an_play_square(const uint8_t pin, const unsigned hz, const float duty)
+{
+        bool top = true;
+        for (;;) {
+                if (an_sines_terminate[pin])
+                        return;
+                float sine = sin((millis() / (1000.0f / (2.0f * PI))) * hz);
+                float triangle = 1.0f-acos(sine)/PI;
+
+                float new_top = triangle <= duty;
+                if (new_top != top) {
+                        an_set_voltage(pin, new_top * 5.0f);
+                        top = new_top;
+                }
+        }
+}
+
+void an_attach_square(const uint8_t pin, const unsigned hz, const float duty)
+{
+        an_remove_square(pin);
+        an_squares_terminate[pin] = false;
+        std::thread square(an_play_square, pin, hz, duty);
+        an_squares[pin] = move(square);
+}
+void an_remove_square(const uint8_t pin)
+{
+        an_is_pin_defined(pin);
+        auto square_pos = an_squares.find(pin);
+        if (square_pos != an_squares.end()) {
+                an_squares_terminate[pin] = true;
+                an_squares[pin].join();
+                an_squares.erase(square_pos);
+        }
+}
 #undef AN_IMPL
 #endif // AN_IMPL
 
