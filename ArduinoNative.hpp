@@ -1,5 +1,9 @@
+#ifndef ArduinoNative_H_
+#define ArduinoNative_H_
+
 #ifndef ArduinoNative
 #define ArduinoNative
+#endif // ArduinoNative
 
 #include <algorithm>
 #include <bitset>
@@ -64,8 +68,35 @@ typedef enum {
 #define AN_BOARD_PRO
 #endif
 
+#if defined(AN_TEENSY_41)
+
+#define AN_MAX_PINS 42
+
+enum {
+        LED_BUILTIN = 13,
+        A0 = 14,
+        A1 = 15,
+        A2 = 16,
+        A3 = 17,
+        A4 = 18,
+        A5 = 19,
+        A6 = 20,
+        A7 = 21,
+        A8 = 22,
+        A9 = 23,
+        A10 = 24,
+        A11 = 25,
+        A12 = 26,
+        A13 = 27,
+        A14 = 38,
+        A15 = 39,
+        A16 = 40,
+        A17 = 41,
+};
+
+
 /* ↓ Arduino PRO / Pro Mini and Arduino NANO ↓ */
-#if defined(AN_BOARD_NANO) || defined(AN_BOARD_PRO)
+#elif defined(AN_BOARD_NANO) || defined(AN_BOARD_PRO)
 
 #define AN_MAX_PINS 21
 
@@ -282,33 +313,6 @@ public:
         }
 };
 
-
-// Implimentation
-#ifdef AN_IMPL
-
-unsigned long an_start_time_ms;
-unsigned long an_start_time_µs;
-typedef enum {
-        an_analog,
-        an_digital,
-        an_pwm,
-        an_int_pin,
-} an_pin_types_t;
-typedef struct an_int {
-        void (*intpointer)(void);
-        an_int_mode_t mode;
-} an_int_t;
-std::unordered_map<uint8_t, an_int_t> an_ints;
-std::unordered_map<uint8_t, std::thread> an_sines;
-std::unordered_map<uint8_t, bool> an_sines_terminate;
-std::unordered_map<uint8_t, std::thread> an_squares;
-std::unordered_map<uint8_t, bool> an_squares_terminate;
-bool an_interrupts_enabled = true;
-float an_reference_v = 5.0;
-
-void setup(void);
-void loop(void);
-void an_is_pin_defined(const uint8_t pin, const an_pin_types_t = an_digital);
 #ifndef _WIN32
 void serialEvent() __attribute__((weak));
 #endif
@@ -386,7 +390,7 @@ public:
                 buffer.erase(buffer.begin());
                 return read_byte;
         }
-        size_t readBytes(byte* buffer, const unsigned length, const bool is_until = false, const char terminator = '\0')
+        size_t readBytes(char* buffer, const unsigned length, const bool is_until = false, const char terminator = '\0')
         {
                 size_t count = 0;
                 for(; count < length; count++) {
@@ -397,7 +401,7 @@ public:
                 }
                 return count;
         }
-        inline size_t readBytesUntil(const char terminator, byte* buffer, const unsigned length)
+        inline size_t readBytesUntil(const char terminator, char* buffer, const unsigned length)
         {
                 return readBytes(buffer, length, true, terminator);
         }
@@ -445,6 +449,7 @@ public:
 
         template <typename T>
         inline size_t write(const T val)                  {return print(val, HEX) / 2;}
+        inline size_t write(const uint8_t* data, int data_len) {return data_len;} // TODO: implement
 
         template <typename V, typename F>
         inline size_t println(const V val, const F fmt)   {return print(val, fmt) + println();}
@@ -453,13 +458,70 @@ public:
         inline size_t println()                           {std::cout << "\n"; return 1;}
 };
 
+// TODO: add debug functionality
+// maybe add the option to add emulated hardware?
+class an_wire
+{
+public:
+        void begin() {};
+        void begin(uint8_t adr);
+        int requestFrom(uint8_t adr, int quant);
+        int requestFrom(uint8_t adr, int quant, bool stop);
+        void beginTransmission(uint8_t adr);
+        void endTransmission();
+        void endTransmission(bool stop);
+        int write(uint8_t val);
+        int write(String str);
+        int write(const uint8_t* data, int len);
+        int available();
+        int read();
+        void setClock(int hz);
+        void onReceive(void(*handler)(int num_bytes));
+        void onRequest(void(*handler)(void));
+};
+
 an_serial Serial;
+an_wire Wire;
+
+#ifdef AN_TEENSY_41
+an_serial Serial1;
+an_serial Serial2;
+an_wire Wire1;
+an_wire Wire2;
+#endif
+
+// Implimentation
+#ifdef AN_IMPL
+
+unsigned long an_start_time_ms;
+unsigned long an_start_time_micros;
+typedef enum {
+        an_analog,
+        an_digital,
+        an_pwm,
+        an_int_pin,
+} an_pin_types_t;
+typedef struct an_int {
+        void (*intpointer)(void);
+        an_int_mode_t mode;
+} an_int_t;
+std::unordered_map<uint8_t, an_int_t> an_ints;
+std::unordered_map<uint8_t, std::thread> an_sines;
+std::unordered_map<uint8_t, bool> an_sines_terminate;
+std::unordered_map<uint8_t, std::thread> an_squares;
+std::unordered_map<uint8_t, bool> an_squares_terminate;
+bool an_interrupts_enabled = true;
+float an_reference_v = 5.0;
+
+void setup(void);
+void loop(void);
+void an_is_pin_defined(const uint8_t pin, const an_pin_types_t = an_digital);
 
 // start program
 int main()
 {
         an_start_time_ms = millis();
-        an_start_time_µs = micros();
+        an_start_time_micros = micros();
 
         setup();
         for (;;) loop();
@@ -593,15 +655,15 @@ void delay(unsigned long ms)
 {
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
-void delayMicroseconds(unsigned long µs)
+void delayMicroseconds(unsigned long micros)
 {
-        std::this_thread::sleep_for(std::chrono::microseconds(µs));
+        std::this_thread::sleep_for(std::chrono::microseconds(micros));
 }
 
 unsigned long micros()
 {
         auto duration = std::chrono::system_clock::now().time_since_epoch();
-        return (unsigned long)std::chrono::duration_cast<std::chrono::microseconds>(duration).count() - an_start_time_µs;
+        return (unsigned long)std::chrono::duration_cast<std::chrono::microseconds>(duration).count() - an_start_time_micros;
 }
 unsigned long millis()
 {
@@ -776,4 +838,4 @@ void an_remove_square(const uint8_t pin)
 #undef AN_IMPL
 #endif // AN_IMPL
 
-#endif // ArduinoNative
+#endif // ArduinoNative_H_
